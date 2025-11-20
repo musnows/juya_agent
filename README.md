@@ -26,6 +26,8 @@ pip install openai openai-agents python-dotenv requests
 npm install -g schedule-task-mcp
 ```
 
+如果你安装了uv，则直接使用`uv sync`即可初始化python虚拟环境。
+
 ### 2. 配置环境变量
 
 创建 `.env` 文件：
@@ -62,10 +64,14 @@ SCHEDULE_TASK_SAMPLING_TIMEOUT="300000"
 }
 ```
 
+这里的三个字段都是B站Cookie的字段，打开B站后，F12进入开发者工具，点击`网络`选项窗，然后刷新页面，在data.bilibili.com的请求Cookie中，可以找到这三个字段，将对应字段的value拷贝到config中即可。
+
 ### 4. 运行
 
 ```bash
 python chat.py
+# 或者使用uv
+uv run chat.py
 ```
 
 ## 使用示例
