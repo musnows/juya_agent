@@ -34,6 +34,7 @@ npm install -g schedule-task-mcp
 # OpenAI API
 OPENAI_API_KEY="your-api-key"
 OPENAI_BASE_URL="https://ai.devtool.tech/proxy/v1"
+OPENAI_MODEL=gpt-4o-mini
 
 # 邮件配置
 EMAIL_FROM="your-email@163.com"

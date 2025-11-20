@@ -23,6 +23,7 @@ load_dotenv()
 # 创建 OpenAI 客户端，显式传入 base_url 和 api_key
 api_key = os.getenv("OPENAI_API_KEY")
 base_url = os.getenv("OPENAI_BASE_URL")
+llm_model = os.getenv("OPENAI_MODEL")
 
 if not api_key:
     raise ValueError("OPENAI_API_KEY 环境变量未设置")
@@ -37,11 +38,12 @@ openai_client = AsyncOpenAI(
 set_default_openai_client(openai_client, use_for_tracing=False)
 
 model = OpenAIChatCompletionsModel(
-    model="gpt-5-mini",
+    model=llm_model,
     openai_client=openai_client)
 print(f"✅ OpenAI 客户端已配置")
 print(f"   Base URL: {base_url}")
-print(f"   API Key: {api_key[:20]}..." if api_key else "   API Key: 未设置")
+print(f"   API Key: {api_key[:6]}......{api_key[-4:]}" if api_key else "   API Key: 未设置")
+print(f"   LLM Model: {llm_model}")
 
 
 # ============= MCP Server 配置 =============

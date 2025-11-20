@@ -165,7 +165,6 @@ class JuyaChatBot:
                 "args": ["-y", "schedule-task-mcp@0.2.0"],
                 "env": schedule_env,
             },
-            sampling_callback=callback,  # ✨ 启用 Sampling 支持
             client_session_timeout_seconds=30,
         )
 

@@ -11,7 +11,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
-
+LLM_MODEL = os.getenv("OPENAI_MODEL")
 
 class AISubtitleProcessor:
     """AI驱动的字幕智能处理器"""
@@ -147,7 +147,7 @@ class AISubtitleProcessor:
 
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=LLM_MODEL,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.3
             )
@@ -244,7 +244,7 @@ class AISubtitleProcessor:
 
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=LLM_MODEL,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.5
             )
@@ -307,7 +307,7 @@ class AISubtitleProcessor:
 
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=LLM_MODEL,
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.3
             )
