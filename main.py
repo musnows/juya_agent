@@ -19,9 +19,9 @@ from typing import Dict, List, Optional
 
 from dotenv import load_dotenv
 
-from modules.bilibili_api import BilibiliAPI, parse_cookie_string
-from modules.subtitle_processor_ai import AISubtitleProcessor
-from modules.email_sender import EmailSender
+from utils.modules.bilibili_api import BilibiliAPI, parse_cookie_string
+from utils.modules.subtitle_processor_ai import AISubtitleProcessor
+from utils.modules.email_sender import EmailSender
 
 # 加载环境变量
 load_dotenv()

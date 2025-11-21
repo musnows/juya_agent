@@ -9,9 +9,8 @@ from dotenv import load_dotenv
 from openai import AsyncOpenAI
 
 from agents import Agent, set_default_openai_client, OpenAIChatCompletionsModel  # OpenAI Agents SDK
-from agents.mcp import MCPServerStdio
 
-from tools import (
+from .tools import (
     check_new_videos,
     process_video,
     send_email_report,

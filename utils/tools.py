@@ -12,9 +12,9 @@ from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from agents import function_tool
 
-from modules.bilibili_api import BilibiliAPI, parse_cookie_string
-from modules.subtitle_processor_ai import AISubtitleProcessor
-from modules.email_sender import EmailSender
+from .modules.bilibili_api import BilibiliAPI, parse_cookie_string
+from .modules.subtitle_processor_ai import AISubtitleProcessor
+from .modules.email_sender import EmailSender
 
 
 # 加载环境变量

@@ -18,13 +18,12 @@ import asyncio
 import os
 import sys
 import logging
-import subprocess
 from dotenv import load_dotenv
 from agents import Agent, Runner
 from agents.mcp import MCPServerStdio
 from agents.tracing import set_tracing_disabled
 from mcp.types import CreateMessageResult, TextContent
-from juya_agents import orchestrator_agent
+from utils.juya_agents import orchestrator_agent
 from pathlib import Path
 
 # 加载环境变量
