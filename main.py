@@ -164,18 +164,23 @@ class JuyaProcessor:
             print("📝 生成文档...")
             markdown = self.processor.format_markdown(processed_data)
             
-            # 保存文档
+            # 保存Markdown文档
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(markdown)
             
             print(f"✅ 文档已生成: {filepath}")
+            
+            # 生成JSON文件
+            json_filepath = self._generate_json_file(processed_data, video_info, bvid, filepath)
+            print(f"✅ JSON文件已生成: {json_filepath}")
             
             # 更新处理记录
             processed = self._load_processed_videos()
             processed[bvid] = {
                 'title': video_info['title'],
                 'processed_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                'subtitle_path': str(filepath)
+                'subtitle_path': str(filepath),
+                'json_path': str(json_filepath)
             }
             self._save_processed_videos(processed)
             
@@ -184,6 +189,47 @@ class JuyaProcessor:
         except Exception as e:
             print(f"❌ 处理视频失败: {e}")
             return False
+    
+    def _generate_json_file(self, processed_data: Dict, video_info: Dict, bvid: str, md_filepath: str) -> str:
+        """生成JSON文件"""
+        try:
+            # 提取新闻数据
+            news_items = processed_data.get('news_items', [])
+            overview = processed_data.get('overview', {})
+            
+            # 构建data数组
+            data_array = []
+            for index,item in enumerate(news_items, 1):
+                data_array.append({
+                    "index": index,
+                    "title": item.get('title', ''),
+                    "content": item.get('content', ''),
+                    "sources": item.get('sources',[])
+                })
+            
+            # 构建完整的JSON结构
+            json_data = {
+                "data": data_array,
+                "created_time": overview.get('processed_time', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
+                "title": video_info.get('title', ''),
+                "date": overview.get('publish_date', datetime.fromtimestamp(video_info.get('pubdate', 0)).strftime('%Y-%m-%d'))
+            }
+            
+            # 生成JSON文件路径（与MD文件同目录同名）
+            md_path = Path(md_filepath)
+            json_filepath = md_path.with_suffix('.json')
+            
+            # 保存JSON文件
+            with open(json_filepath, 'w', encoding='utf-8') as f:
+                json.dump(json_data, f, ensure_ascii=False, indent=2)
+            
+            return str(json_filepath)
+            
+        except Exception as e:
+            print(f"❌ 生成JSON文件失败: {e}")
+            # 返回默认路径
+            md_path = Path(md_filepath)
+            return str(md_path.with_suffix('.json'))
     
     def send_email_report(self, bvid: str, to_email: str = None) -> bool:
         """发送邮件报告"""
