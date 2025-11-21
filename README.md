@@ -9,24 +9,27 @@
 - 📧 自动发送邮件通知
 - ⏰ 支持定时任务（通过自然语言创建，如"每天早上9点检查新视频"）
 - 💬 交互式对话界面
+- 🚀 命令行工具（单次运行、指定BV号、定时监控）
 
 ## 技术栈
 
 - OpenAI Agents SDK
 - OpenAI API (gpt-4o-mini)
 - schedule-task-mcp（定时任务）
-- Python 3.10+
+- Python 3.13+
 
 ## 快速开始
 
 ### 1. 安装依赖
 
 ```bash
+# 使用 uv（推荐）
+uv sync
+
+# 或使用 pip
 pip install openai openai-agents python-dotenv requests
 npm install -g schedule-task-mcp
 ```
-
-如果你安装了uv，则直接使用`uv sync`即可初始化python虚拟环境。
 
 ### 2. 配置环境变量
 
@@ -68,48 +71,112 @@ SCHEDULE_TASK_SAMPLING_TIMEOUT="300000"
 
 ### 4. 运行
 
+#### 交互式对话模式（推荐）
 ```bash
 python chat.py
 # 或者使用uv
 uv run chat.py
 ```
 
+#### 命令行模式
+```bash
+# 单次运行（获取最新AI早报）
+uv run python main.py
+
+# 显式指定单次运行
+uv run python main.py --single
+
+# 处理指定BV号视频
+uv run python main.py --bv BV1234567890
+
+# 定时运行（每10分钟检测一次）
+uv run python main.py --loop
+
+# 单次运行并发送邮件
+uv run python main.py --single --send-email
+
+# 定时运行并发送邮件
+uv run python main.py --loop --send-email
+```
+
 ## 使用示例
 
-### 基础功能
+### 交互式对话模式
+#### 基础功能
 ```
 💬 你: 检查新视频
 💬 你: 处理 BV1234567890
 💬 你: 处理最新视频并发送邮件
 ```
 
-### 定时任务
+#### 定时任务
 ```
 💬 你: 每天早上9点检查新视频
 💬 你: 查看我的定时任务
 💬 你: 删除任务 task-xxx
 ```
 
+### 命令行模式
+#### 单次运行
+```bash
+# 获取最新AI早报并生成文档
+uv run python main.py
+
+# 获取最新AI早报并发送邮件
+uv run python main.py --send-email
+```
+
+#### 指定视频处理
+```bash
+# 处理指定BV号视频
+uv run python main.py --bv BV1S9yKB1Ekb
+
+# 处理指定BV号视频并发送邮件
+uv run python main.py --bv BV1S9yKB1Ekb --send-email
+```
+
+#### 定时监控
+```bash
+# 定时运行（每10分钟检测一次）
+uv run python main.py --loop
+
+# 定时运行并发送邮件通知
+uv run python main.py --loop --send-email
+```
+
+#### 获取帮助
+```bash
+# 查看所有可用参数
+uv run python main.py --help
+```
+
 ## 项目结构
 
 ```
-juya_openai/
+juya_agent/
+├── main.py                  # 命令行入口（单次/BV号/定时模式）
 ├── chat.py                  # 交互式对话入口
-├── juya_agents.py           # Agent 定义
-├── tools.py                 # 工具函数
-├── modules/                 # 业务模块
-│   ├── bilibili_api.py      # B站API封装
-│   ├── subtitle_processor_ai.py  # AI字幕处理
-│   └── email_sender.py      # 邮件发送
+├── pyproject.toml           # 项目配置和依赖
+├── utils/                   # 工具和Agent定义
+│   ├── juya_agents.py       # Agent 定义
+│   ├── tools.py             # 工具函数
+│   └── modules/             # 业务模块
+│       ├── bilibili_api.py   # B站API封装
+│       ├── subtitle_processor_ai.py  # AI字幕处理
+│       └── email_sender.py   # 邮件发送
 ├── config/
 │   └── cookies.json         # B站 cookies（需自行配置）
 ├── data/                    # 数据文件（已处理视频、定时任务数据库）
+│   ├── processed_videos.json # 已处理视频记录
+│   └── schedule_tasks.db    # 定时任务数据库
 ├── docs/                    # 生成的 Markdown 文档
+├── .ai-docs/                # 说明文档
 └── .env                     # 环境变量配置（需自行配置）
 ```
 
 ## 工作流程
 
+### 交互式对话模式
 ```
 用户输入 → orchestrator_agent
     ↓
@@ -122,11 +189,25 @@ juya_openai/
 返回结果
 ```
 
+### 命令行模式
+```
+命令行参数 → JuyaProcessor
+    ↓
+根据模式执行：
+- 单次运行：获取最新AI早报 → 处理视频 → 可选邮件
+- BV号模式：处理指定视频 → 可选邮件  
+- 定时模式：循环检测 → 处理新视频 → 可选邮件
+    ↓
+生成文档到 docs/ 目录
+    ↓
+记录处理状态到 data/processed_videos.json
+```
+
 ## 开发
 
 ### 添加新工具
 
-在 `tools.py` 中定义：
+在 `utils/tools.py` 中定义：
 
 ```python
 @function_tool
@@ -135,7 +216,7 @@ def your_tool(param: Annotated[str, "参数说明"]) -> YourResultModel:
     return YourResultModel(...)
 ```
 
-在 `juya_agents.py` 中注册：
+在 `utils/juya_agents.py` 中注册：
 
 ```python
 orchestrator_agent = Agent(
@@ -143,6 +224,23 @@ orchestrator_agent = Agent(
     model="gpt-4o-mini",
     tools=[check_new_videos, process_video, send_email_report, your_tool]
 )
+```
+
+### 添加新的命令行功能
+
+1. 在 `main.py` 的 `JuyaProcessor` 类中添加新方法
+2. 在 `argparse` 配置中添加新的命令行参数
+3. 在 `main()` 函数中处理新的运行模式
+
+```python
+def your_new_mode(processor: JuyaProcessor, args):
+    """新的运行模式"""
+    print("🚀 新运行模式")
+    # 实现你的逻辑
+    pass
+
+# 在 main() 中添加
+parser.add_argument('--your-flag', help='你的新参数')
 ```
 
 ## License
