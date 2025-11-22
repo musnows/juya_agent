@@ -2,6 +2,52 @@
 
 橘鸦视频监控 Agent，自动检测 B 站新视频并生成 AI 早报。
 
+## 🎯 新功能：AI早报展示系统
+
+我们新增了一个现代化的Web界面来展示AI早报内容！
+
+### ✨ 特色功能
+- 🎨 **科技杂志风格**：深色主题配合霓虹蓝色调
+- 📱 **响应式设计**：完美适配桌面、平板和手机
+- 🔄 **分页浏览**：每页显示10条早报，支持翻页查看
+- 🔍 **详情查看**：点击早报卡片查看完整内容和相关链接
+- 📊 **实时统计**：显示早报总数和资讯条数
+- 🎬 **视频链接**：直接跳转到B站观看对应视频
+
+### 🚀 快速启动
+```bash
+# 一键启动AI早报服务（包含前后端）
+python run.py
+```
+
+访问 http://localhost:15000 即可查看精美的早报展示页面。
+
+### 📁 新增文件结构
+```
+├── frontend/           # Web前端界面
+│   ├── index.html     # 主页面
+│   ├── styles.css     # 现代化样式
+│   ├── script.js      # 交互逻辑
+│   └── README.md      # 前端详细文档
+├── backend/           # Python后端服务
+│   ├── app.py         # Flask应用（集成前后端）
+│   ├── requirements.txt # 依赖包
+│   └── start_server.py # 启动脚本
+└── run.py             # 一键启动脚本
+```
+
+### 🔧 API接口
+访问 http://localhost:15000/api 可用接口：
+- `GET /api/reports` - 获取所有早报
+- `GET /api/reports/<id>` - 获取特定早报详情
+- `GET /api/search?q=关键词` - 搜索早报
+- `GET /api/stats` - 获取统计信息
+- `GET /api/health` - 健康检查
+
+详细说明请查看 [frontend/README.md](frontend/README.md)
+
+---
+
 ## 功能
 
 - 🎥 检查橘鸦 B 站账号的最新视频

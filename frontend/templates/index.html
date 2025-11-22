@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI早报 - 每日AI资讯精选</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="logo">
+                    <i class="fas fa-newspaper"></i>
+                    AI早报
+                </h1>
+                <p class="subtitle">每日AI资讯精选，把握技术前沿动态</p>
+            </div>
+        </header>
+
+        <!-- 主要内容区域 -->
+        <main class="main">
+            <!-- 列表视图 -->
+            <div id="list-view" class="list-view">
+                <div class="toolbar">
+                    <button class="btn-refresh" onclick="refreshData()">
+                        <i class="fas fa-sync-alt"></i>
+                        刷新
+                    </button>
+                    <div class="stats">
+                        <span id="total-count">共 0 条早报</span>
+                    </div>
+                </div>
+
+                <!-- 加载中状态 -->
+                <div id="loading" class="loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    加载中...
+                </div>
+
+                <!-- 早报列表 -->
+                <div id="newspapers-list" class="newspapers-list">
+                    <!-- 动态生成内容 -->
+                </div>
+
+                <!-- 分页控件 -->
+                <div id="pagination" class="pagination">
+                    <!-- 动态生成分页 -->
+                </div>
+            </div>
+
+            <!-- 详情视图 -->
+            <div id="detail-view" class="detail-view hidden">
+                <div class="detail-header">
+                    <button class="btn-back" onclick="showListView()">
+                        <i class="fas fa-arrow-left"></i>
+                        返回列表
+                    </button>
+                    <div class="detail-actions">
+                        <button class="btn-refresh-detail" onclick="refreshDetail()">
+                            <i class="fas fa-sync-alt"></i>
+                            刷新
+                        </button>
+                    </div>
+                </div>
+
+                <div id="detail-content" class="detail-content">
+                    <!-- 动态生成内容 -->
+                </div>
+            </div>
+        </main>
+
+        <!-- 底部 -->
+        <footer class="footer">
+            <p>&copy; 2025 AI早报. 整理自橘鸦AI早报</p>
+        </footer>
+    </div>
+
+    <!-- 错误提示 -->
+    <div id="error-toast" class="toast error hidden">
+        <i class="fas fa-exclamation-circle"></i>
+        <span id="error-message"></span>
+    </div>
+
+    <!-- 成功提示 -->
+    <div id="success-toast" class="toast success hidden">
+        <i class="fas fa-check-circle"></i>
+        <span id="success-message"></span>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
