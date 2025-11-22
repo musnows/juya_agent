@@ -652,6 +652,10 @@ body::before {
     color: var(--primary-brown);
     text-decoration: underline;
     transition: color 0.3s ease;
+    word-wrap: break-word;
+    word-break: break-all;
+    overflow-wrap: break-word;
+    hyphens: auto;
 }
 
 .detail-content a:hover {
@@ -1035,6 +1039,14 @@ body::before {
     line-height: 1.6;
 }
 
+/* 通用链接样式 - 确保所有链接都能正确换行 */
+a {
+    word-wrap: break-word;
+    word-break: break-all;
+    overflow-wrap: break-word;
+    hyphens: auto;
+}
+
 /* 响应式设计 - 报纸风格移动端适配 */
 @media (max-width: 768px) {
     :root {
@@ -1147,6 +1159,24 @@ body::before {
         left: var(--spacing-md);
         min-width: auto;
         top: var(--spacing-md);
+    }
+
+    /* 移动端链接样式增强 */
+    a {
+        max-width: 100%;
+        display: inline-block;
+        vertical-align: top;
+    }
+
+    .detail-content a {
+        line-height: 1.4;
+        margin-bottom: 2px;
+    }
+
+    .detail-content p {
+        word-wrap: break-word;
+        word-break: break-word;
+        overflow-wrap: break-word;
     }
 }
 
