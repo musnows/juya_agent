@@ -550,35 +550,26 @@ class WebGenerator:
 
         self.logger.info("\n🔄 检测到Git仓库，提交更新...")
         try:
-            # 保存当前目录
-            original_cwd = os.getcwd()
-
-            # 进入dist目录
-            os.chdir(self.output_dir)
-
             # 获取当前日期
             current_date = datetime.now().strftime("%Y-%m-%d")
 
             # 执行git add --all
-            subprocess.run(["git", "add", "--all"], check=True, capture_output=True, text=True)
+            subprocess.run(["git", "add", "--all"], check=True, capture_output=True, text=True, cwd=dist_git_dir)
             self.logger.info("   ✅ 已添加所有更改到暂存区")
 
             # 执行git commit
             commit_message = f"update: daily report auto update {current_date}"
-            subprocess.run(["git", "commit", "-m", commit_message], check=True, capture_output=True, text=True)
+            subprocess.run(["git", "commit", "-m", commit_message], check=True, capture_output=True, text=True, cwd=dist_git_dir)
             self.logger.info(f"   ✅ 已提交更新: {commit_message}")
 
-            # 切换回原目录
-            os.chdir(original_cwd)
+            # 执行git push
+            subprocess.run(["git", "push"], check=True, capture_output=True, text=True, cwd=dist_git_dir)
+            self.logger.info(f"   ✅ 已完成push")
 
         except subprocess.CalledProcessError as e:
             self.logger.error(f"   ❌ Git操作失败: {e}")
-            # 切换回原目录
-            os.chdir(original_cwd if 'original_cwd' in locals() else os.getcwd())
         except Exception as e:
             self.logger.error(f"   ❌ Git提交过程中出错: {e}")
-            # 切换回原目录
-            os.chdir(original_cwd if 'original_cwd' in locals() else os.getcwd())
 
     def generate_static_site(self) -> bool:
         """生成完整的静态网站"""
