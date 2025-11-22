@@ -194,7 +194,7 @@ class JuyaProcessor:
             video_info = self.api.get_video_info(bvid)
             video_date = datetime.fromtimestamp(video_info['pubdate'])
             date_str = video_date.strftime('%Y-%m-%d')
-            filename = f"{bvid}_{date_str}_AI早报.md"
+            filename = f"{date_str}_AI早报_{bvid}.md"
             filepath = DOCS_DIR / filename
             
             # 检查是否已处理
@@ -395,7 +395,7 @@ class JuyaProcessor:
             video_info = self.api.get_video_info(bvid)
             video_date = datetime.fromtimestamp(video_info['pubdate'])
             date_str = video_date.strftime('%Y-%m-%d')
-            filename = f"{bvid}_{date_str}_AI早报.md"
+            filename = f"{date_str}_AI早报_{bvid}.md"
             filepath = DOCS_DIR / filename
 
             if not force_regenerate and filepath.exists():

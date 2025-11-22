@@ -31,14 +31,24 @@ class NewspaperService:
 
     def _parse_filename(self, filename: str) -> Dict:
         """解析文件名获取信息"""
-        # 文件名格式: BV号_日期_AI早报.md
-        match = re.match(r'([^_]+)_(\d{4}-\d{2}-\d{2})_AI早报\.md', filename)
+        # 文件名格式: 日期_AI早报_BV号.md (新格式)
+        match = re.match(r'(\d{4}-\d{2}-\d{2})_AI早报_([^\.]+)\.md', filename)
         if match:
             return {
-                'bv_id': match.group(1),
-                'date': match.group(2),
+                'bv_id': match.group(2),
+                'date': match.group(1),
                 'filename': filename
             }
+
+        # 兼容旧格式: BV号_日期_AI早报.md
+        match_old = re.match(r'([^_]+)_(\d{4}-\d{2}-\d{2})_AI早报\.md', filename)
+        if match_old:
+            return {
+                'bv_id': match_old.group(1),
+                'date': match_old.group(2),
+                'filename': filename
+            }
+
         return None
 
     def _parse_markdown_file(self, filepath: str) -> Dict:
