@@ -22,6 +22,7 @@ from dotenv import load_dotenv
 from utils.modules.bilibili_api import BilibiliAPI, parse_cookie_string
 from utils.modules.subtitle_processor_ai import AISubtitleProcessor
 from utils.modules.email_sender import EmailSender
+from utils.web_generator import WebGenerator
 
 # 加载环境变量
 load_dotenv()
@@ -31,6 +32,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 PROCESSED_VIDEOS_PATH = PROJECT_ROOT / "data" / "processed_videos.json"
 DOCS_DIR = PROJECT_ROOT / "docs"
 COOKIE_FILE = PROJECT_ROOT / "config" / "cookies.json"
+DIST_DIR = PROJECT_ROOT / "dist"
 
 # 橘鸦UP主UID
 JUYA_UID = 285286947
@@ -454,57 +456,80 @@ class JuyaProcessor:
         }
 
 
-def single_run(processor: JuyaProcessor, send_email: bool = False):
+def single_run(processor: JuyaProcessor, send_email: bool = False, generate_web: bool = False):
     """单次运行模式：获取最新AI早报"""
     print("="*60)
     print("🚀 单次运行模式 - 获取最新AI早报")
     print("="*60)
-    
+
     # 获取最新AI早报视频
     bvid = processor.get_latest_ai_report()
     if not bvid:
         print("❌ 未找到AI早报视频")
         return False
-    
+
     # 处理视频
     success = processor.process_video(bvid)
     if not success:
         print("❌ 处理视频失败")
         return False
-    
+
     # 发送邮件（如果需要）
     if send_email:
         processor.send_email_report(bvid)
-    
+
+    # 生成静态前端（如果需要）
+    if generate_web:
+        print("\n🌐 生成静态前端网站...")
+        web_generator = WebGenerator(DOCS_DIR, DIST_DIR)
+        web_result = web_generator.generate_static_site()
+        if web_result:
+            print("✅ 静态前端网站已更新")
+        else:
+            print("❌ 静态前端网站生成失败")
+
     print("✅ 单次运行完成")
     return True
 
 
-def bv_run(processor: JuyaProcessor, bvid: str, send_email: bool = False):
+def bv_run(processor: JuyaProcessor, bvid: str, send_email: bool = False, generate_web: bool = False):
     """指定BV号运行模式"""
     print("="*60)
     print(f"🎯 指定BV号运行模式 - {bvid}")
     print("="*60)
-    
+
     # 处理视频
     success = processor.process_video(bvid)
     if not success:
         print("❌ 处理视频失败")
         return False
-    
+
     # 发送邮件（如果需要）
     if send_email:
         processor.send_email_report(bvid)
-    
+
+    # 生成静态前端（如果需要）
+    if generate_web:
+        print("\n🌐 生成静态前端网站...")
+        web_generator = WebGenerator(DOCS_DIR, DIST_DIR)
+        web_result = web_generator.generate_static_site()
+        if web_result:
+            print("✅ 静态前端网站已更新")
+        else:
+            print("❌ 静态前端网站生成失败")
+
     print("✅ BV号运行完成")
     return True
 
 
-def loop_run(processor: JuyaProcessor, send_email: bool = False):
+def loop_run(processor: JuyaProcessor, send_email: bool = False, generate_web: bool = False):
     """定时运行模式：每10分钟检测一次"""
     print("="*60)
     print("⏰ 定时运行模式 - 每10分钟检测一次")
     print("="*60)
+
+    if generate_web:
+        print("🌐 启用自动前端更新模式")
 
     check_interval = 600  # 10分钟
 
@@ -521,8 +546,20 @@ def loop_run(processor: JuyaProcessor, send_email: bool = False):
                 if bvid:
                     # 处理视频
                     success = processor.process_video(bvid)
-                    if success and send_email:
-                        processor.send_email_report(bvid)
+                    if success:
+                        # 发送邮件（如果需要）
+                        if send_email:
+                            processor.send_email_report(bvid)
+
+                        # 生成静态前端（如果需要）
+                        if generate_web:
+                            print("🌐 更新静态前端网站...")
+                            web_generator = WebGenerator(DOCS_DIR, DIST_DIR)
+                            web_result = web_generator.generate_static_site()
+                            if web_result:
+                                print("✅ 静态前端网站已更新")
+                            else:
+                                print("❌ 静态前端网站生成失败")
                 else:
                     print("📭 暂无新的AI早报")
 
@@ -535,7 +572,7 @@ def loop_run(processor: JuyaProcessor, send_email: bool = False):
         print(f"❌ 定时运行出错: {e}")
 
 
-def history_run(processor: JuyaProcessor, days: int = 30, force: bool = False):
+def history_run(processor: JuyaProcessor, days: int = 30, force: bool = False, generate_web: bool = False):
     """历史运行模式：处理指定天数的历史AI早报"""
     print("="*60)
     print(f"📚 历史运行模式 - 处理最近 {days} 天的AI早报")
@@ -563,10 +600,54 @@ def history_run(processor: JuyaProcessor, days: int = 30, force: bool = False):
             json.dump(result, f, ensure_ascii=False, indent=2)
 
         print(f"📄 详细报告已保存: {report_path}")
+
+        # 生成静态前端（如果需要）
+        if generate_web:
+            print("\n🌐 生成静态前端网站...")
+            web_generator = WebGenerator(DOCS_DIR, DIST_DIR)
+            web_result = web_generator.generate_static_site()
+            if web_result:
+                print("✅ 静态前端网站已更新")
+            else:
+                print("❌ 静态前端网站生成失败")
     else:
         print("❌ 未找到任何历史AI早报视频")
 
     return result
+
+
+def web_run(processor: JuyaProcessor):
+    """Web运行模式：生成静态前端网站"""
+    print("="*60)
+    print("🌐 Web运行模式 - 生成静态前端网站")
+    print("="*60)
+
+    try:
+        # 创建Web生成器
+        web_generator = WebGenerator(DOCS_DIR, DIST_DIR)
+
+        print("📁 准备生成静态前端...")
+        print(f"   源目录: {DOCS_DIR}")
+        print(f"   输出目录: {DIST_DIR}")
+
+        # 生成静态网站
+        result = web_generator.generate_static_site()
+
+        if result:
+            print("✅ 静态前端网站生成成功！")
+            print(f"📂 输出目录: {DIST_DIR}")
+            print(f"📄 主页面: {DIST_DIR}/index.html")
+            print("\n🚀 要查看网站，请在浏览器中打开:")
+            print(f"   file://{DIST_DIR}/index.html")
+        else:
+            print("❌ 静态前端网站生成失败")
+            return False
+
+        return True
+
+    except Exception as e:
+        print(f"❌ 生成静态前端失败: {e}")
+        return False
 
 
 def main():
@@ -583,7 +664,16 @@ def main():
   %(prog)s --history                 # 处理历史30天的AI早报
   %(prog)s --history 15              # 处理历史15天的AI早报
   %(prog)s --history 30 --force      # 强制重新生成历史30天的AI早报
-  %(prog)s --send-email              # 发送邮件（可与其他参数组合使用）
+  %(prog)s --web                     # 生成静态前端网站到dist目录
+
+组合选项:
+  %(prog)s --web                     # 仅生成静态前端网站
+  %(prog)s --single --web            # 单次运行并生成静态前端
+  %(prog)s --bv BV1234567890 --web   # 处理指定BV号并生成静态前端
+  %(prog)s --loop --web              # 定时运行并自动更新静态前端
+  %(prog)s --history --web           # 处理历史早报并生成静态前端
+  %(prog)s --send-email --web        # 发送邮件并生成静态前端
+  %(prog)s --history --force --web   # 强制重新生成历史早报并更新静态前端
         """
     )
 
@@ -597,6 +687,7 @@ def main():
     # 其他选项
     parser.add_argument('--force', action='store_true', help='强制重新生成已存在的文档')
     parser.add_argument('--send-email', action='store_true', help='处理完成后发送邮件')
+    parser.add_argument('--web', action='store_true', help='处理完成后生成静态前端网站（可与其他参数组合使用）')
 
     args = parser.parse_args()
 
@@ -619,14 +710,17 @@ def main():
 
     # 执行对应的运行模式
     try:
-        if mode == 'single':
-            single_run(processor, args.send_email)
+        # 如果只有--web参数（没有其他任何参数），执行纯web生成
+        if args.web and not args.single and not args.bv and not args.loop and args.history is None and not args.send_email and not args.force:
+            web_run(processor)
+        elif mode == 'single':
+            single_run(processor, args.send_email, args.web)
         elif mode == 'bv':
-            bv_run(processor, args.bv, args.send_email)
+            bv_run(processor, args.bv, args.send_email, args.web)
         elif mode == 'loop':
-            loop_run(processor, args.send_email)
+            loop_run(processor, args.send_email, args.web)
         elif mode == 'history':
-            history_run(processor, days=args.history, force=args.force)
+            history_run(processor, days=args.history, force=args.force, generate_web=args.web)
     except KeyboardInterrupt:
         print("\n👋 程序已停止")
     except Exception as e:

@@ -10,5 +10,6 @@ data/*
 
 # docs目录下的所有文件（但保留目录本身）
 docs/*
+dist/*
 
 __pycache__
