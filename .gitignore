@@ -1,4 +1,6 @@
 .env
+.venv
+venv
 
 # config目录下的 cookies.json
 config/cookies.json
