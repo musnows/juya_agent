@@ -131,7 +131,9 @@ class NewspaperService:
                     if newspaper_data:
                         # 合并文件信息和解析内容
                         newspaper_data.update(file_info)
-                        newspapers.append(newspaper_data)
+                        # 只添加有咨询的文件，跳过0个咨询的文件
+                        if newspaper_data.get('news_count', 0) > 0:
+                            newspapers.append(newspaper_data)
 
         # 按日期排序（最新的在前面）
         newspapers.sort(key=lambda x: x.get('publish_date', ''), reverse=True)
