@@ -530,19 +530,29 @@ def bv_run(processor: JuyaProcessor, bvid: str, send_email: bool = False, genera
 
 
 def loop_run(processor: JuyaProcessor, send_email: bool = False, generate_web: bool = False):
-    """定时运行模式：每10分钟检测一次"""
+    """定时运行模式：每15分钟检测一次，0-7点跳过检查"""
     logger.info("="*60)
-    logger.info("⏰ 定时运行模式 - 每10分钟检测一次")
+    logger.info("⏰ 定时运行模式 - 每15分钟检测一次，0-7点跳过检查")
     logger.info("="*60)
 
     if generate_web:
         logger.info("🌐 启用自动前端更新模式")
 
-    check_interval = 600  # 10分钟
+    check_interval = 900  # 15分钟
 
     try:
         while True:
-            logger.info(f"\n🕐 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - 开始检测...")
+            current_time = datetime.now()
+            current_hour = current_time.hour
+
+            # 检查是否在跳过时间（0-7点）
+            if 0 <= current_hour < 7:
+                logger.info(f"\n🌙 当前时间 {current_time.strftime('%Y-%m-%d %H:%M:%S')} 处于跳过时段（0-7点），不进行检测")
+                logger.info(f"💤 等待 {check_interval // 60} 分钟后进行下次检测...")
+                time.sleep(check_interval)
+                continue
+
+            logger.info(f"\n🕐 {current_time.strftime('%Y-%m-%d %H:%M:%S')} - 开始检测...")
 
             # 检查今日是否已有报告
             if processor._check_today_report_exists():
@@ -667,7 +677,7 @@ def main():
   %(prog)s                           # 单次运行，获取最新AI早报
   %(prog)s --single                  # 同上，显式指定单次运行
   %(prog)s --bv BV1234567890        # 处理指定BV号视频
-  %(prog)s --loop                    # 定时运行，每10分钟检测一次
+  %(prog)s --loop                    # 定时运行，每15分钟检测一次，0-7点跳过检查
   %(prog)s --history                 # 处理历史30天的AI早报
   %(prog)s --history 15              # 处理历史15天的AI早报
   %(prog)s --history 30 --force      # 强制重新生成历史30天的AI早报
