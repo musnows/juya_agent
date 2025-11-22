@@ -9,6 +9,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -536,6 +537,49 @@ class WebGenerator:
 
         self.logger.info(f"   ✅ JSON数据已生成: {json_filepath}")
 
+    def _auto_git_commit(self):
+        """自动Git提交更新
+
+        检查dist目录是否存在git仓库，如果存在则提交更新。
+        提交信息格式: update: daily report auto update yyyy-mm-dd
+        """
+        dist_git_dir = self.output_dir / ".git"
+        if not dist_git_dir.exists():
+            self.logger.info("\n📝 dist目录不是Git仓库，跳过自动提交")
+            return
+
+        self.logger.info("\n🔄 检测到Git仓库，提交更新...")
+        try:
+            # 保存当前目录
+            original_cwd = os.getcwd()
+
+            # 进入dist目录
+            os.chdir(self.output_dir)
+
+            # 获取当前日期
+            current_date = datetime.now().strftime("%Y-%m-%d")
+
+            # 执行git add --all
+            subprocess.run(["git", "add", "--all"], check=True, capture_output=True, text=True)
+            self.logger.info("   ✅ 已添加所有更改到暂存区")
+
+            # 执行git commit
+            commit_message = f"update: daily report auto update {current_date}"
+            subprocess.run(["git", "commit", "-m", commit_message], check=True, capture_output=True, text=True)
+            self.logger.info(f"   ✅ 已提交更新: {commit_message}")
+
+            # 切换回原目录
+            os.chdir(original_cwd)
+
+        except subprocess.CalledProcessError as e:
+            self.logger.error(f"   ❌ Git操作失败: {e}")
+            # 切换回原目录
+            os.chdir(original_cwd if 'original_cwd' in locals() else os.getcwd())
+        except Exception as e:
+            self.logger.error(f"   ❌ Git提交过程中出错: {e}")
+            # 切换回原目录
+            os.chdir(original_cwd if 'original_cwd' in locals() else os.getcwd())
+
     def generate_static_site(self) -> bool:
         """生成完整的静态网站"""
         try:
@@ -592,6 +636,9 @@ class WebGenerator:
                 f.write(readme_content)
 
             self.logger.info(f"   ✅ README文件已生成: {readme_filepath}")
+
+            # 自动Git提交更新
+            self._auto_git_commit()
 
             return True
 
