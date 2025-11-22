@@ -221,6 +221,7 @@ class AISubtitleProcessor:
                 score += 1
 
             if score >= 2:  # 阈值
+                url = url.replace('http://','https://') # 避免出现http链接
                 matched_links.append(url)
 
         return matched_links[:3]  # 最多3个链接
@@ -411,7 +412,8 @@ class AISubtitleProcessor:
             if item['sources']:
                 md_lines.append("**🔗 相关链接：**")
                 for link in item['sources']:
-                    md_lines.append(f"- <{link}>")
+                    https_link = link.replace('http://','https://')
+                    md_lines.append(f"- <{https_link}>")
                 md_lines.append("")
 
             md_lines.append("---\n")
