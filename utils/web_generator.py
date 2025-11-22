@@ -554,16 +554,19 @@ class WebGenerator:
             current_date = datetime.now().strftime("%Y-%m-%d")
 
             # 执行git add --all
-            subprocess.run(["git", "add", "--all"], check=True, capture_output=True, text=True, cwd=dist_git_dir)
+            subprocess.run(["git", "add", "--all"], check=True, capture_output=True, 
+                           text=True, cwd=self.output_dir)
             self.logger.info("   ✅ 已添加所有更改到暂存区")
 
             # 执行git commit
             commit_message = f"update: daily report auto update {current_date}"
-            subprocess.run(["git", "commit", "-m", commit_message], check=True, capture_output=True, text=True, cwd=dist_git_dir)
+            subprocess.run(["git", "commit", "-m", commit_message], check=True, capture_output=True, 
+                           text=True, cwd=self.output_dir)
             self.logger.info(f"   ✅ 已提交更新: {commit_message}")
 
             # 执行git push
-            subprocess.run(["git", "push"], check=True, capture_output=True, text=True, cwd=dist_git_dir)
+            subprocess.run(["git", "push"], check=True, capture_output=True, text=True, 
+                           cwd=self.output_dir, timeout=300)
             self.logger.info(f"   ✅ 已完成push")
 
         except subprocess.CalledProcessError as e:
