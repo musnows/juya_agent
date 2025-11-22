@@ -406,7 +406,7 @@ class AISubtitleProcessor:
             if item['sources']:
                 md_lines.append("**🔗 相关链接：**")
                 for link in item['sources']:
-                    md_lines.append(f"- {link}")
+                    md_lines.append(f"- <{link}>")
                 md_lines.append("")
 
             md_lines.append("---\n")
@@ -414,7 +414,7 @@ class AISubtitleProcessor:
         # 页脚
         md_lines.append("---\n")
         md_lines.append("## 🎬 视频链接\n")
-        md_lines.append(f"**Bilibili：** https://www.bilibili.com/video/{overview['bvid']}\n")
+        md_lines.append(f"**Bilibili**： <https://www.bilibili.com/video/{overview['bvid']}>\n")
         md_lines.append("---\n")
         md_lines.append(f"*整理自橘鸦AI早报 | BV号：{overview['bvid']} | {overview['processed_time']}*")
 
