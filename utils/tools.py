@@ -15,6 +15,7 @@ from agents import function_tool
 from .modules.bilibili_api import BilibiliAPI, parse_cookie_string
 from .modules.subtitle_processor_ai import AISubtitleProcessor
 from .modules.email_sender import EmailSender
+from .logger import get_logger
 
 
 # 加载环境变量
@@ -29,6 +30,9 @@ COOKIE_FILE = PROJECT_ROOT / "config" / "cookies.json"
 # 创建必要的目录
 DOCS_DIR.mkdir(exist_ok=True)
 (PROJECT_ROOT / "data").mkdir(exist_ok=True)
+
+# 创建全局日志器
+logger = get_logger("tools")
 
 
 # ============= Pydantic Models =============
@@ -433,14 +437,14 @@ def process_video(
     # 检查文档文件是否已存在
     if not force_regenerate and filepath.exists():
         # 文档已存在，直接返回已有信息
-        print(f"📄 文档已存在，跳过重新生成: {filepath}")
+        logger.info(f"📄 文档已存在，跳过重新生成: {filepath}")
 
         # 从已存在的文档中解析资讯数量
         try:
             processed_data = _parse_markdown_to_data(str(filepath))
             news_count = processed_data['overview']['total_news']
         except Exception as e:
-            print(f"⚠️ 解析文档失败: {e}")
+            logger.error(f"⚠️ 解析文档失败: {e}")
             news_count = 0  # 解析失败时返回 0
 
         # 确保记录在 processed_videos.json 中
@@ -462,14 +466,14 @@ def process_video(
 
     # 需要处理：文档不存在 或 强制重新生成
     if force_regenerate:
-        print(f"🔄 强制重新生成文档...")
+        logger.info(f"🔄 强制重新生成文档...")
 
     # 获取字幕
     subtitle = api.get_subtitle(bvid)
 
     # 处理字幕（如果没有字幕，会使用视频简介作为备用）
     if not subtitle:
-        print(f"⚠️ 视频 {bvid} 没有字幕，将使用视频简介提取新闻...")
+        logger.warning(f"⚠️ 视频 {bvid} 没有字幕，将使用视频简介提取新闻...")
 
     processed_data = processor.process(subtitle if subtitle else [], video_info)
 
@@ -489,7 +493,7 @@ def process_video(
     }
     _save_processed_videos(processed_videos)
 
-    print(f"✅ 文档已生成: {filepath}")
+    logger.info(f"✅ 文档已生成: {filepath}")
 
     return ProcessResult(
         bvid=bvid,

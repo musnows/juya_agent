@@ -15,6 +15,7 @@ from .tools import (
     process_video,
     send_email_report,
 )
+from .logger import get_logger
 
 # 加载环境变量
 load_dotenv()
@@ -36,13 +37,16 @@ openai_client = AsyncOpenAI(
 # 设置为 agents 库的默认客户端
 set_default_openai_client(openai_client, use_for_tracing=False)
 
+# 初始化日志器
+logger = get_logger("juya_agents")
+
 model = OpenAIChatCompletionsModel(
     model=llm_model,
     openai_client=openai_client)
-print(f"✅ OpenAI 客户端已配置")
-print(f"   Base URL: {base_url}")
-print(f"   API Key: {api_key[:6]}......{api_key[-4:]}" if api_key else "   API Key: 未设置")
-print(f"   LLM Model: {llm_model}")
+logger.info(f"✅ OpenAI 客户端已配置")
+logger.info(f"   Base URL: {base_url}")
+logger.info(f"   API Key: {api_key[:6]}......{api_key[-4:]}" if api_key else "   API Key: 未设置")
+logger.info(f"   LLM Model: {llm_model}")
 
 
 # ============= MCP Server 配置 =============

@@ -14,6 +14,8 @@ from pathlib import Path
 from typing import Dict, List, Optional
 import markdown
 
+from .logger import get_logger
+
 
 class WebGenerator:
     """静态前端生成器"""
@@ -25,6 +27,9 @@ class WebGenerator:
             docs_dir: 源文档目录路径
             output_dir: 输出目录路径
         """
+        # 初始化日志器
+        self.logger = get_logger("web_generator")
+
         self.docs_dir = Path(docs_dir)
         self.output_dir = Path(output_dir)
         self.page_size = 10
@@ -115,7 +120,7 @@ class WebGenerator:
                 )
             }
         except Exception as e:
-            print(f"解析文件失败 {filepath}: {e}")
+            self.logger.error(f"解析文件失败 {filepath}: {e}")
             return None
 
     def _load_newspapers(self) -> List[Dict]:
@@ -123,7 +128,7 @@ class WebGenerator:
         newspapers = []
 
         if not self.docs_dir.exists():
-            print(f"文档目录不存在: {self.docs_dir}")
+            self.logger.warning(f"文档目录不存在: {self.docs_dir}")
             return newspapers
 
         # 遍历docs目录下的所有markdown文件
@@ -513,7 +518,7 @@ class WebGenerator:
 
         # 复制静态文件
         shutil.copytree(frontend_static_dir, target_static_dir)
-        print(f"   ✅ 静态文件已复制到: {target_static_dir}")
+        self.logger.info(f"   ✅ 静态文件已复制到: {target_static_dir}")
 
     def _generate_json_data(self, newspapers: List[Dict]):
         """生成JSON数据文件"""
@@ -529,33 +534,33 @@ class WebGenerator:
         with open(json_filepath, 'w', encoding='utf-8') as f:
             json.dump(json_data, f, ensure_ascii=False, indent=2)
 
-        print(f"   ✅ JSON数据已生成: {json_filepath}")
+        self.logger.info(f"   ✅ JSON数据已生成: {json_filepath}")
 
     def generate_static_site(self) -> bool:
         """生成完整的静态网站"""
         try:
-            print("📚 加载早报数据...")
+            self.logger.info("📚 加载早报数据...")
             newspapers = self._load_newspapers()
 
             if not newspapers:
-                print("⚠️ 没有找到早报数据")
+                self.logger.warning("⚠️ 没有找到早报数据")
                 return False
 
-            print(f"   📄 找到 {len(newspapers)} 个早报文件")
+            self.logger.info(f"   📄 找到 {len(newspapers)} 个早报文件")
 
-            print("🌐 生成HTML页面...")
+            self.logger.info("🌐 生成HTML页面...")
             # 生成首页HTML
             index_html = self._generate_html_index(newspapers)
             index_filepath = self.output_dir / 'index.html'
             with open(index_filepath, 'w', encoding='utf-8') as f:
                 f.write(index_html)
-            print(f"   ✅ 首页已生成: {index_filepath}")
+            self.logger.info(f"   ✅ 首页已生成: {index_filepath}")
 
-            print("📁 复制静态文件...")
+            self.logger.info("📁 复制静态文件...")
             # 复制CSS、JS、图片等静态文件
             self._copy_static_files()
 
-            print("📊 生成JSON数据...")
+            self.logger.info("📊 生成JSON数据...")
             # 生成JSON数据文件
             self._generate_json_data(newspapers)
 
@@ -586,10 +591,10 @@ class WebGenerator:
             with open(readme_filepath, 'w', encoding='utf-8') as f:
                 f.write(readme_content)
 
-            print(f"   ✅ README文件已生成: {readme_filepath}")
+            self.logger.info(f"   ✅ README文件已生成: {readme_filepath}")
 
             return True
 
         except Exception as e:
-            print(f"❌ 生成静态网站失败: {e}")
+            self.logger.error(f"❌ 生成静态网站失败: {e}")
             return False

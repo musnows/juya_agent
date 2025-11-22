@@ -10,6 +10,8 @@ from typing import List, Dict, Optional
 from openai import OpenAI
 from dotenv import load_dotenv
 
+from ..logger import get_logger
+
 load_dotenv()
 LLM_MODEL = os.getenv("OPENAI_MODEL")
 
@@ -17,6 +19,9 @@ class AISubtitleProcessor:
     """AI驱动的字幕智能处理器"""
 
     def __init__(self):
+        # 初始化日志器
+        self.logger = get_logger("subtitle_processor")
+
         # 使用 OpenAI API
         api_key = os.getenv("OPENAI_API_KEY")
         base_url = os.getenv("OPENAI_BASE_URL")
@@ -49,7 +54,7 @@ class AISubtitleProcessor:
             news_items = self._ai_extract_news(full_text, subtitle_data, desc_links)
         else:
             # 没有字幕时，使用视频简介作为备用
-            print("⚠️ 没有字幕，使用视频简介提取新闻...")
+            self.logger.warning("⚠️ 没有字幕，使用视频简介提取新闻...")
             news_items = self._extract_news_from_description(video_info.get('desc', ''), desc_links)
 
         # 3. 生成概览
@@ -180,7 +185,7 @@ class AISubtitleProcessor:
             return news_items
 
         except Exception as e:
-            print(f"AI提取失败: {e}")
+            self.logger.error(f"AI提取失败: {e}")
             # 降级为简单提取
             return self._simple_extract_news(subtitles)
 
@@ -252,7 +257,7 @@ class AISubtitleProcessor:
             return response.choices[0].message.content.strip()
 
         except Exception as e:
-            print(f"AI生成概览失败: {e}")
+            self.logger.error(f"AI生成概览失败: {e}")
             return f"本期AI早报共包含 {len(news_items)} 条资讯，涵盖AI领域的最新动态。"
 
     def _extract_news_from_description(self, description: str, desc_links: List[Dict]) -> List[Dict]:
@@ -267,7 +272,7 @@ class AISubtitleProcessor:
             新闻列表
         """
         if not description or len(description.strip()) < 50:
-            print("⚠️ 视频简介内容太少，无法提取新闻")
+            self.logger.warning("⚠️ 视频简介内容太少，无法提取新闻")
             return []
 
         prompt = f"""你是一个专业的AI资讯编辑。请从以下视频简介中，提炼出结构化的新闻条目。
@@ -337,11 +342,11 @@ class AISubtitleProcessor:
                     'index': idx + 1
                 })
 
-            print(f"✅ 从视频简介中提取到 {len(news_items)} 条新闻")
+            self.logger.info(f"✅ 从视频简介中提取到 {len(news_items)} 条新闻")
             return news_items
 
         except Exception as e:
-            print(f"从简介提取新闻失败: {e}")
+            self.logger.error(f"从简介提取新闻失败: {e}")
             # 如果AI提取失败，返回空列表
             return []
 

@@ -10,6 +10,8 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
+from ..logger import get_logger
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -35,6 +37,8 @@ class EmailSender:
             smtp_server: SMTP 服务器地址
             smtp_port: SMTP 端口
         """
+        # 初始化日志器
+        self.logger = get_logger("email_sender")
         # 如果未提供参数，从项目根目录的 .env 读取，避免依赖当前工作目录
         load_dotenv(PROJECT_ROOT / ".env")
 
@@ -95,41 +99,41 @@ class EmailSender:
                             server.starttls()
                             server.ehlo()
                         else:
-                            print("⚠️ 服务器不支持 STARTTLS，使用未加密连接继续发送")
+                            self.logger.warning("⚠️ 服务器不支持 STARTTLS，使用未加密连接继续发送")
                     server.login(self.from_email, self.smtp_password)
                     server.send_message(msg)
 
-                print(f"✅ 邮件发送成功（第 {attempt} 次尝试）")
+                self.logger.info(f"✅ 邮件发送成功（第 {attempt} 次尝试）")
                 return True
 
             except smtplib.SMTPException as e:
-                print(f"❌ SMTP 错误（第 {attempt}/{max_retries} 次）: {e}")
+                self.logger.error(f"❌ SMTP 错误（第 {attempt}/{max_retries} 次）: {e}")
                 if attempt < max_retries:
                     wait_time = attempt * 2  # 递增等待时间：2秒、4秒、6秒...
-                    print(f"⏳ {wait_time} 秒后重试...")
+                    self.logger.info(f"⏳ {wait_time} 秒后重试...")
                     time.sleep(wait_time)
                 else:
-                    print(f"❌ 已达到最大重试次数，邮件发送失败")
+                    self.logger.error(f"❌ 已达到最大重试次数，邮件发送失败")
                     return False
 
             except (ConnectionError, TimeoutError, OSError) as e:
-                print(f"❌ 连接错误（第 {attempt}/{max_retries} 次）: {type(e).__name__}: {e}")
+                self.logger.error(f"❌ 连接错误（第 {attempt}/{max_retries} 次）: {type(e).__name__}: {e}")
                 if attempt < max_retries:
                     wait_time = attempt * 2
-                    print(f"⏳ {wait_time} 秒后重试...")
+                    self.logger.info(f"⏳ {wait_time} 秒后重试...")
                     time.sleep(wait_time)
                 else:
-                    print(f"❌ 已达到最大重试次数，邮件发送失败")
+                    self.logger.error(f"❌ 已达到最大重试次数，邮件发送失败")
                     return False
 
             except Exception as e:
-                print(f"❌ 邮件发送失败（第 {attempt}/{max_retries} 次）: {type(e).__name__}: {e}")
+                self.logger.error(f"❌ 邮件发送失败（第 {attempt}/{max_retries} 次）: {type(e).__name__}: {e}")
                 if attempt < max_retries:
                     wait_time = attempt * 2
-                    print(f"⏳ {wait_time} 秒后重试...")
+                    self.logger.info(f"⏳ {wait_time} 秒后重试...")
                     time.sleep(wait_time)
                 else:
-                    print(f"❌ 已达到最大重试次数，邮件发送失败")
+                    self.logger.error(f"❌ 已达到最大重试次数，邮件发送失败")
                     return False
 
         return False
