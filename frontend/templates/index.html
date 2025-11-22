@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI早报 - 每日AI资讯精选</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- System fonts only - no external font loading for better performance -->
 </head>
 <body>
     <div class="container">
@@ -17,6 +18,16 @@
                     AI早报
                 </h1>
                 <p class="subtitle">每日AI资讯精选，把握技术前沿动态</p>
+                <div class="source-info">
+                    <p class="source-text">
+                        <i class="fas fa-info-circle"></i>
+                        所有AI早报整理自
+                        <a href="https://space.bilibili.com/285286947" target="_blank" class="bilibili-link">
+                            <i class="fab fa-bilibili"></i>
+                            B站@橘鸦Juya
+                        </a>
+                    </p>
+                </div>
             </div>
         </header>
 
@@ -74,7 +85,7 @@
 
         <!-- 底部 -->
         <footer class="footer">
-            <p>&copy; 2025 AI早报. 整理自橘鸦AI早报</p>
+            <p>&copy; 2025  AI早报 - <a href="https://github.com/musnows/juya_agent" target="_blank">musnows/juya_agent</a> - 整理自橘鸦AI早报</p>
         </footer>
     </div>
 

@@ -110,7 +110,6 @@ def main():
         host = '0.0.0.0'
         port = 15000
         print(f"📍 访问地址: http://localhost:{port}")
-        print(f"🌐 局域网访问: http://你的IP:{port}")
         print("按 Ctrl+C 停止服务")
         print("="*50)
 

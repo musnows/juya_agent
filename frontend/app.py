@@ -79,7 +79,27 @@ class NewspaperService:
                 'news_count': news_count,
                 'overview': overview,
                 'content': content,
-                'html_content': markdown.markdown(content, extensions=['extra', 'codehilite'])
+                'html_content': markdown.markdown(
+                    content,
+                    extensions=[
+                        'extra',
+                        'codehilite',
+                        'tables',
+                        'toc',
+                        'fenced_code',
+                        'nl2br',
+                        'attr_list',
+                        'def_list',
+                        'footnotes',
+                        'admonition'
+                    ],
+                    extension_configs={
+                        'codehilite': {
+                            'css_class': 'highlight',
+                            'use_pygments': True
+                        }
+                    }
+                )
             }
         except Exception as e:
             print(f"解析文件失败 {filepath}: {e}")
@@ -230,4 +250,4 @@ def refresh_cache():
 if __name__ == '__main__':
     print(f"文档目录: {DOCS_DIR}")
     print("启动AI早报前端服务...")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5001)

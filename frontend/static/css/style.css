@@ -1,3 +1,28 @@
+/* CSS变量定义 - 报纸风格配色 */
+:root {
+    /* 主色调 - 温暖的米色和棕色系 */
+    --primary-brown: #2c1810;
+    --accent-orange: #d97634;
+    --accent-cream: #f8f4e6;
+    --paper-white: #faf9f5;
+    --ink-dark: #1a1a1a;
+    --gray-light: #8b7969;
+    --gray-medium: #6b5b4b;
+    --gray-lighter: #d9cfc0;
+
+    /* 间距 */
+    --spacing-xs: 0.5rem;
+    --spacing-sm: 1rem;
+    --spacing-md: 1.5rem;
+    --spacing-lg: 2rem;
+    --spacing-xl: 3rem;
+
+    /* 阴影 */
+    --shadow-subtle: 0 2px 8px rgba(44, 24, 16, 0.08);
+    --shadow-medium: 0 4px 16px rgba(44, 24, 16, 0.12);
+    --shadow-strong: 0 8px 32px rgba(44, 24, 16, 0.16);
+}
+
 /* 全局样式 */
 * {
     margin: 0;
@@ -7,249 +32,469 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #f5f2ea 0%, #e8dfd0 100%);
     min-height: 100vh;
-    color: #333;
-    line-height: 1.6;
+    color: var(--ink-dark);
+    line-height: 1.7;
+    position: relative;
+}
+
+/* 添加纸质纹理背景 */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image:
+        repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 2px,
+            rgba(44, 24, 16, 0.01) 2px,
+            rgba(44, 24, 16, 0.01) 4px
+        );
+    pointer-events: none;
+    z-index: 1;
 }
 
 .container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 20px;
+    padding: var(--spacing-lg);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    position: relative;
+    z-index: 2;
 }
 
-/* 头部样式 */
+/* 头部样式 - 报纸风格 */
 .header {
     text-align: center;
-    margin-bottom: 30px;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border-radius: 15px;
-    padding: 30px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    margin-bottom: var(--spacing-xl);
+    background: var(--paper-white);
+    border: 2px solid var(--primary-brown);
+    position: relative;
+    padding: var(--spacing-xl) var(--spacing-lg);
+    box-shadow: var(--shadow-strong);
+}
+
+/* 添加装饰性边框 */
+.header::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    border: 1px solid var(--gray-lighter);
+    pointer-events: none;
 }
 
 .logo {
-    font-size: 2.5rem;
-    color: #667eea;
-    margin-bottom: 10px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    font-size: 3rem;
+    color: var(--primary-brown);
+    margin-bottom: var(--spacing-sm);
     font-weight: 700;
+    letter-spacing: -0.02em;
+    position: relative;
+    text-shadow: 1px 1px 0 var(--accent-cream);
 }
 
 .logo i {
-    margin-right: 15px;
+    margin-right: var(--spacing-sm);
+    color: var(--accent-orange);
 }
 
 .subtitle {
-    color: #666;
+    font-style: italic;
+    color: var(--gray-medium);
     font-size: 1.1rem;
-    font-weight: 300;
+    font-weight: 400;
+    position: relative;
+}
+
+/* 添加装饰性分隔线 */
+.subtitle::after {
+    content: '';
+    display: block;
+    width: 80px;
+    height: 2px;
+    background: var(--accent-orange);
+    margin: var(--spacing-sm) auto 0;
 }
 
 /* 主要内容区域 */
 .main {
     flex: 1;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border-radius: 15px;
-    padding: 30px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
+    background: var(--paper-white);
+    border: 1px solid var(--gray-lighter);
+    position: relative;
+    padding: var(--spacing-xl);
+    box-shadow: var(--shadow-medium);
+    margin-bottom: var(--spacing-lg);
 }
 
-/* 工具栏 */
+/* 工具栏 - 报纸风格 */
 .toolbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 25px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #e0e0e0;
+    margin-bottom: var(--spacing-xl);
+    padding-bottom: var(--spacing-md);
+    border-bottom: 2px solid var(--gray-lighter);
+    position: relative;
+}
+
+/* 添加装饰性元素 */
+.toolbar::before {
+    content: '◆';
+    position: absolute;
+    bottom: -11px;
+    left: 0;
+    color: var(--accent-orange);
+    font-size: 18px;
+}
+
+.toolbar::after {
+    content: '◆';
+    position: absolute;
+    bottom: -11px;
+    right: 0;
+    color: var(--accent-orange);
+    font-size: 18px;
 }
 
 .btn-refresh {
-    background: linear-gradient(45deg, #667eea, #764ba2);
-    color: white;
+    background: var(--primary-brown);
+    color: var(--paper-white);
     border: none;
-    padding: 10px 20px;
-    border-radius: 25px;
-    cursor: pointer;
+    padding: var(--spacing-xs) var(--spacing-md);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
     font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--spacing-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-refresh::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: var(--accent-orange);
+    transition: left 0.3s ease;
+    z-index: 0;
+}
+
+.btn-refresh:hover::before {
+    left: 0;
 }
 
 .btn-refresh:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-medium);
+}
+
+.btn-refresh i,
+.btn-refresh span {
+    position: relative;
+    z-index: 1;
 }
 
 .stats {
-    color: #666;
-    font-size: 14px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    font-style: italic;
+    color: var(--gray-medium);
+    font-size: 15px;
+    position: relative;
+}
+
+/* 添加装饰性引用符号 */
+.stats::before {
+    content: '"';
+    color: var(--accent-orange);
+    margin-right: 4px;
+}
+
+.stats::after {
+    content: '"';
+    color: var(--accent-orange);
+    margin-left: 4px;
 }
 
 /* 加载状态 */
 .loading {
     text-align: center;
-    padding: 50px;
-    color: #667eea;
+    padding: var(--spacing-xl);
+    color: var(--gray-medium);
     font-size: 18px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    font-style: italic;
 }
 
 .loading i {
-    margin-right: 10px;
+    margin-right: var(--spacing-xs);
     font-size: 24px;
+    color: var(--accent-orange);
+    animation: pulse 1.5s ease-in-out infinite;
 }
 
-/* 早报列表 */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* 早报列表 - 报纸版式 */
 .newspapers-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 20px;
-    margin-bottom: 30px;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
 }
 
 .newspaper-card {
-    background: white;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-    cursor: pointer;
-    border: 1px solid #e0e0e0;
+    background: var(--paper-white);
+    border: 2px solid var(--gray-lighter);
     position: relative;
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow-subtle);
+    transition: all 0.4s ease;
+    cursor: pointer;
     overflow: hidden;
+    transform-style: preserve-3d;
 }
 
+/* 报纸折角效果 */
 .newspaper-card::before {
     content: '';
     position: absolute;
     top: 0;
-    left: 0;
     right: 0;
-    height: 4px;
-    background: linear-gradient(45deg, #667eea, #764ba2);
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 40px 40px 0;
+    border-color: transparent var(--accent-orange) transparent transparent;
+    transition: all 0.3s ease;
+    opacity: 0.8;
+}
+
+/* 装饰性邮票孔 */
+.newspaper-card::after {
+    content: '';
+    position: absolute;
+    top: var(--spacing-sm);
+    left: var(--spacing-sm);
+    right: var(--spacing-sm);
+    height: 8px;
+    background: repeating-linear-gradient(
+        to right,
+        var(--gray-lighter) 0px,
+        var(--gray-lighter) 8px,
+        transparent 8px,
+        transparent 16px
+    );
+    opacity: 0.3;
 }
 
 .newspaper-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    transform: translateY(-3px) rotateX(2deg);
+    box-shadow: var(--shadow-strong);
+    border-color: var(--accent-orange);
+}
+
+.newspaper-card:hover::before {
+    border-width: 0 50px 50px 0;
 }
 
 .newspaper-header {
-    margin-bottom: 15px;
+    margin-bottom: var(--spacing-md);
+    position: relative;
+    z-index: 1;
 }
 
 .newspaper-title {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 10px;
-    line-height: 1.4;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--primary-brown);
+    margin-bottom: var(--spacing-sm);
+    line-height: 1.3;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    text-shadow: 0.5px 0.5px 0 var(--accent-cream);
 }
 
 .newspaper-meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 15px;
+    gap: var(--spacing-md);
     font-size: 13px;
-    color: #666;
+    color: var(--gray-medium);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    font-style: italic;
 }
 
 .meta-item {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
+    position: relative;
 }
 
 .meta-item i {
-    color: #667eea;
+    color: var(--accent-orange);
+    font-size: 12px;
+}
+
+/* 添加装饰性分隔符 */
+.meta-item:not(:last-child)::after {
+    content: '•';
+    position: absolute;
+    right: -12px;
+    color: var(--gray-lighter);
 }
 
 .newspaper-overview {
-    margin-top: 15px;
+    margin-top: var(--spacing-md);
     font-size: 14px;
-    color: #555;
-    line-height: 1.5;
+    color: var(--gray-medium);
+    line-height: 1.6;
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    border-left: 3px solid var(--accent-orange);
+    padding-left: var(--spacing-sm);
+    position: relative;
 }
 
 .newspaper-stats {
-    margin-top: 15px;
-    padding-top: 15px;
-    border-top: 1px solid #f0f0f0;
+    margin-top: var(--spacing-md);
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--gray-lighter);
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: relative;
+    z-index: 1;
 }
 
 .stats-count {
-    background: linear-gradient(45deg, #667eea, #764ba2);
-    color: white;
-    padding: 4px 12px;
-    border-radius: 15px;
+    background: var(--primary-brown);
+    color: var(--paper-white);
+    padding: 6px 14px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: relative;
 }
 
-/* 分页 */
+.stats-count::before {
+    content: '◉';
+    margin-right: 6px;
+    color: var(--accent-orange);
+}
+
+/* 分页 - 报纸风格 */
 .pagination {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 10px;
-    margin-top: 30px;
+    gap: var(--spacing-xs);
+    margin-top: var(--spacing-xl);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
 }
 
 .pagination button {
-    background: white;
-    border: 1px solid #e0e0e0;
-    color: #666;
-    padding: 8px 16px;
-    border-radius: 8px;
+    background: var(--paper-white);
+    border: 2px solid var(--gray-lighter);
+    color: var(--gray-medium);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
-    font-size: 14px;
+    position: relative;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.pagination button::before {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background: var(--accent-orange);
+    transition: all 0.3s ease;
+    transform: translateX(-50%);
+}
+
+.pagination button:hover:not(:disabled)::before {
+    width: 80%;
 }
 
 .pagination button:hover:not(:disabled) {
-    background: #f5f5f5;
-    border-color: #667eea;
-    color: #667eea;
+    background: var(--accent-cream);
+    border-color: var(--accent-orange);
+    color: var(--primary-brown);
+    transform: translateY(-1px);
 }
 
 .pagination button:disabled {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
+    color: var(--gray-lighter);
 }
 
 .pagination button.active {
-    background: linear-gradient(45deg, #667eea, #764ba2);
-    color: white;
-    border-color: transparent;
+    background: var(--primary-brown);
+    color: var(--paper-white);
+    border-color: var(--primary-brown);
+    transform: scale(1.1);
+}
+
+.pagination button.active::before {
+    display: none;
 }
 
 .pagination-info {
-    color: #666;
+    color: var(--gray-medium);
     font-size: 14px;
-    margin: 0 10px;
+    margin: 0 var(--spacing-sm);
+    font-style: italic;
 }
 
-/* 详情视图 */
+/* 分页装饰性元素 */
+.pagination-info::before,
+.pagination-info::after {
+    content: '❦';
+    color: var(--accent-orange);
+    margin: 0 var(--spacing-xs);
+}
+
+/* 详情视图 - 报纸阅读风格 */
 .detail-view {
     max-width: none;
     padding: 0;
@@ -259,203 +504,368 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 25px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #e0e0e0;
+    margin-bottom: var(--spacing-xl);
+    padding-bottom: var(--spacing-md);
+    border-bottom: 2px solid var(--gray-lighter);
+    position: relative;
+}
+
+/* 添加装饰性报纸标题元素 */
+.detail-header::before {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 120px;
+    height: 4px;
+    background: var(--accent-orange);
+}
+
+.detail-header::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    right: 0;
+    width: 80px;
+    height: 4px;
+    background: var(--accent-orange);
 }
 
 .btn-back {
-    background: #f5f5f5;
-    color: #666;
-    border: 1px solid #e0e0e0;
-    padding: 10px 20px;
-    border-radius: 25px;
-    cursor: pointer;
+    background: var(--paper-white);
+    color: var(--gray-medium);
+    border: 2px solid var(--gray-lighter);
+    padding: var(--spacing-xs) var(--spacing-md);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
     font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--spacing-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: relative;
+}
+
+.btn-back::before {
+    content: '←';
+    margin-right: 4px;
+    color: var(--accent-orange);
 }
 
 .btn-back:hover {
-    background: #e0e0e0;
-    color: #333;
+    background: var(--accent-cream);
+    border-color: var(--accent-orange);
+    color: var(--primary-brown);
+    transform: translateX(-2px);
 }
 
 .btn-refresh-detail {
-    background: white;
-    color: #667eea;
-    border: 1px solid #667eea;
-    padding: 10px 20px;
-    border-radius: 25px;
-    cursor: pointer;
+    background: var(--paper-white);
+    color: var(--gray-medium);
+    border: 2px solid var(--gray-lighter);
+    padding: var(--spacing-xs) var(--spacing-md);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
     font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
     transition: all 0.3s ease;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--spacing-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn-refresh-detail::after {
+    content: '↻';
+    margin-left: 4px;
+    color: var(--accent-orange);
 }
 
 .btn-refresh-detail:hover {
-    background: #667eea;
-    color: white;
+    background: var(--accent-cream);
+    border-color: var(--accent-orange);
+    color: var(--primary-brown);
+    transform: rotate(180deg);
 }
 
 .detail-content {
-    background: white;
-    border-radius: 12px;
-    padding: 30px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    border: 1px solid #e0e0e0;
+    background: var(--paper-white);
+    border: 2px solid var(--gray-lighter);
+    position: relative;
+    padding: var(--spacing-xl);
+    box-shadow: var(--shadow-subtle);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    line-height: 1.6;
+    color: var(--ink-dark);
+    max-width: 800px;
+    margin: 0 auto;
 }
 
 .detail-content h1 {
-    color: #333;
     font-size: 2rem;
-    margin-bottom: 20px;
+    font-weight: 600;
+    color: var(--primary-brown);
+    margin-bottom: var(--spacing-lg);
     line-height: 1.3;
+    border-bottom: 2px solid var(--gray-lighter);
+    padding-bottom: var(--spacing-md);
 }
 
 .detail-content h2 {
-    color: #444;
     font-size: 1.5rem;
-    margin: 30px 0 15px 0;
-    padding-bottom: 8px;
-    border-bottom: 2px solid #667eea;
+    font-weight: 600;
+    color: var(--primary-brown);
+    margin: var(--spacing-xl) 0 var(--spacing-md) 0;
+    padding-bottom: var(--spacing-xs);
+    border-bottom: 1px solid var(--gray-lighter);
 }
 
 .detail-content h3 {
-    color: #555;
-    font-size: 1.2rem;
-    margin: 25px 0 10px 0;
-    color: #667eea;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gray-medium);
+    margin: var(--spacing-lg) 0 var(--spacing-sm) 0;
 }
 
 .detail-content p {
-    margin-bottom: 15px;
-    line-height: 1.7;
-    color: #444;
+    margin-bottom: var(--spacing-md);
+    line-height: 1.6;
+    color: var(--ink-dark);
+    text-indent: 0;
 }
 
 .detail-content ul, .detail-content ol {
-    margin: 15px 0;
-    padding-left: 25px;
+    margin: var(--spacing-md) 0;
+    padding-left: 2em;
 }
 
 .detail-content li {
-    margin-bottom: 8px;
-    line-height: 1.6;
+    margin-bottom: var(--spacing-xs);
+    line-height: 1.7;
 }
 
 .detail-content a {
-    color: #667eea;
-    text-decoration: none;
-    border-bottom: 1px solid transparent;
-    transition: border-bottom 0.3s ease;
+    color: var(--primary-brown);
+    text-decoration: underline;
+    transition: color 0.3s ease;
 }
 
 .detail-content a:hover {
-    border-bottom-color: #667eea;
+    color: var(--accent-orange);
+    text-decoration: underline;
 }
 
 .detail-content blockquote {
-    background: #f8f9fa;
-    border-left: 4px solid #667eea;
-    padding: 15px 20px;
-    margin: 20px 0;
+    background: var(--accent-cream);
+    border-left: 4px solid var(--accent-orange);
+    padding: var(--spacing-md) var(--spacing-lg);
+    margin: var(--spacing-lg) 0;
+    font-style: italic;
+    position: relative;
     border-radius: 0 8px 8px 0;
 }
 
+.detail-content blockquote::before {
+    content: '"';
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    font-size: 3rem;
+    color: var(--accent-orange);
+    opacity: 0.3;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+
 .detail-content code {
-    background: #f1f3f4;
+    background: var(--gray-lighter);
     padding: 2px 6px;
     border-radius: 4px;
-    font-family: 'Courier New', monospace;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
     font-size: 0.9em;
+    border: 1px solid var(--gray-medium);
+    color: var(--primary-brown);
 }
 
 .detail-content pre {
-    background: #f8f9fa;
-    padding: 20px;
+    background: var(--accent-cream);
+    padding: var(--spacing-lg);
     border-radius: 8px;
     overflow-x: auto;
-    border: 1px solid #e0e0e0;
+    border: 1px solid var(--gray-lighter);
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    font-size: 0.9em;
+    line-height: 1.6;
 }
 
 .detail-content pre code {
     background: none;
     padding: 0;
+    border: none;
 }
 
 .detail-meta {
-    background: #f8f9fa;
-    padding: 20px;
+    background: var(--accent-cream);
+    border: 2px solid var(--gray-lighter);
+    padding: var(--spacing-lg);
     border-radius: 8px;
-    margin-bottom: 30px;
-    border: 1px solid #e0e0e0;
+    margin-bottom: var(--spacing-xl);
+    position: relative;
+}
+
+.detail-meta::before {
+    content: '📰';
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--paper-white);
+    padding: 5px 15px;
+    border: 2px solid var(--gray-lighter);
+    border-radius: 20px;
+    font-size: 18px;
 }
 
 .detail-meta-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
+    gap: var(--spacing-md);
 }
 
 .detail-meta-item {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: var(--spacing-xs);
     font-size: 14px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
 }
 
 .detail-meta-item i {
-    color: #667eea;
+    color: var(--accent-orange);
     width: 20px;
+    font-size: 16px;
 }
 
 .detail-meta-item strong {
-    color: #333;
+    color: var(--primary-brown);
     min-width: 80px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    font-weight: 600;
 }
 
-/* 底部 */
+/* 底部 - 报纸风格 */
 .footer {
     text-align: center;
-    color: rgba(255, 255, 255, 0.8);
+    color: var(--gray-medium);
     font-size: 14px;
-    padding: 20px 0;
+    padding: var(--spacing-lg) 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    font-style: italic;
+    border-top: 2px solid var(--gray-lighter);
+    margin-top: var(--spacing-xl);
+    position: relative;
 }
 
-/* 工具提示 */
+.footer::before {
+    content: '❦';
+    display: block;
+    color: var(--accent-orange);
+    font-size: 24px;
+    margin-bottom: var(--spacing-xs);
+}
+
+/* 工具提示 - 报纸风格通知 */
 .toast {
     position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 15px 20px;
+    top: var(--spacing-lg);
+    right: var(--spacing-lg);
+    padding: var(--spacing-md) var(--spacing-lg);
+    border: 2px solid var(--primary-brown);
     border-radius: 8px;
-    color: white;
+    color: var(--paper-white);
     font-size: 14px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    font-weight: 600;
     z-index: 1000;
     display: flex;
     align-items: center;
-    gap: 10px;
-    min-width: 250px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    transform: translateX(100%);
-    transition: transform 0.3s ease;
+    gap: var(--spacing-xs);
+    min-width: 280px;
+    box-shadow: var(--shadow-strong);
+    transform: translateX(120%);
+    transition: all 0.4s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 添加报纸戳印效果 */
+.toast::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 2px,
+        rgba(255, 255, 255, 0.1) 2px,
+        rgba(255, 255, 255, 0.1) 4px
+    );
+    pointer-events: none;
 }
 
 .toast.show {
-    transform: translateX(0);
+    transform: translateX(0) rotate(-1deg);
 }
 
 .toast.error {
-    background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+    background: var(--primary-brown);
+    border-color: var(--primary-brown);
+}
+
+.toast.error::after {
+    content: '⚠';
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--accent-orange);
+    color: var(--paper-white);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    border: 2px solid var(--paper-white);
 }
 
 .toast.success {
-    background: linear-gradient(45deg, #51cf66, #40c057);
+    background: var(--gray-medium);
+    border-color: var(--gray-medium);
+}
+
+.toast.success::after {
+    content: '✓';
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--accent-orange);
+    color: var(--paper-white);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    border: 2px solid var(--paper-white);
 }
 
 /* 隐藏类 */
@@ -463,60 +873,314 @@ body {
     display: none !important;
 }
 
-/* 响应式设计 */
+/* 空状态样式 */
+.empty-state {
+    text-align: center;
+    padding: var(--spacing-xl);
+    color: var(--gray-medium);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    font-style: italic;
+}
+
+.empty-state i {
+    color: var(--gray-lighter);
+    margin-bottom: var(--spacing-md);
+}
+
+/* Markdown代码高亮样式 - 报纸风格 */
+.highlight {
+    background: var(--accent-cream);
+    border: 1px solid var(--gray-lighter);
+    border-radius: 8px;
+    padding: var(--spacing-md);
+    overflow-x: auto;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    font-size: 0.9em;
+    line-height: 1.6;
+    margin: var(--spacing-md) 0;
+    position: relative;
+}
+
+/* 代码块标题样式 */
+.highlight::before {
+    content: attr(data-language);
+    position: absolute;
+    top: -12px;
+    left: var(--spacing-sm);
+    background: var(--accent-orange);
+    color: var(--paper-white);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+}
+
+.highlight pre {
+    margin: 0;
+    padding: 0;
+    background: none;
+    border: none;
+    font-size: inherit;
+    line-height: inherit;
+}
+
+/* 语法高亮颜色 - 报纸配色 */
+.highlight .hll { background-color: var(--gray-lighter); }
+.highlight .c { color: var(--gray-medium); font-style: italic; }
+.highlight .k { color: var(--primary-brown); font-weight: bold; }
+.highlight .s { color: var(--accent-orange); }
+.highlight .mi { color: var(--accent-orange); }
+.highlight .mf { color: var(--accent-orange); }
+.highlight .mh { color: var(--accent-orange); }
+.highlight .nn { color: var(--primary-brown); font-weight: bold; }
+.highlight .nc { color: var(--primary-brown); font-weight: bold; }
+.highlight .nf { color: var(--primary-brown); }
+.highlight .o { color: var(--gray-medium); font-weight: bold; }
+.highlight .p { color: var(--gray-medium); }
+.highlight .cm { color: var(--gray-medium); font-style: italic; }
+.highlight .cp { color: var(--primary-brown); font-weight: bold; }
+.highlight .c1 { color: var(--gray-medium); font-style: italic; }
+.highlight .cs { color: var(--primary-brown); font-style: italic; }
+.highlight .gd { color: var(--primary-brown); background-color: var(--accent-cream); }
+.highlight .gi { color: var(--accent-orange); background-color: var(--accent-cream); }
+
+/* Markdown表格样式 - 简洁版 */
+.detail-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: var(--spacing-lg) 0;
+    border: 1px solid var(--gray-lighter);
+}
+
+.detail-content th, .detail-content td {
+    padding: var(--spacing-sm) var(--spacing-md);
+    text-align: left;
+    border-bottom: 1px solid var(--gray-lighter);
+}
+
+.detail-content th {
+    background: var(--accent-cream);
+    font-weight: 600;
+}
+
+.detail-content tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Markdown引用样式增强 */
+.detail-content blockquote {
+    background: var(--accent-cream);
+    border-left: 4px solid var(--accent-orange);
+    padding: var(--spacing-md) var(--spacing-lg);
+    margin: var(--spacing-lg) 0;
+    border-radius: 0 8px 8px 0;
+}
+
+.detail-content blockquote p {
+    margin: 0;
+    text-indent: 0;
+}
+
+/* 移除装饰性markdown样式，保持正常格式 */
+
+/* Markdown admonition样式 (提示框) */
+.detail-content .admonition {
+    margin: var(--spacing-lg) 0;
+    padding: var(--spacing-md);
+    border: 2px solid var(--gray-lighter);
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+.detail-content .admonition::before {
+    content: attr(data-admonition);
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: var(--primary-brown);
+    color: var(--paper-white);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.detail-content .admonition.note {
+    border-color: var(--accent-orange);
+}
+
+.detail-content .admonition.note::before {
+    background: var(--accent-orange);
+}
+
+.detail-content .admonition.warning {
+    border-color: var(--primary-brown);
+}
+
+.detail-content .admonition.warning::before {
+    background: var(--primary-brown);
+}
+
+.detail-content .admonition-content {
+    margin-top: var(--spacing-md);
+    padding-top: var(--spacing-md);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+/* 响应式设计 - 报纸风格移动端适配 */
 @media (max-width: 768px) {
+    :root {
+        --spacing-xs: 0.4rem;
+        --spacing-sm: 0.8rem;
+        --spacing-md: 1.2rem;
+        --spacing-lg: 1.6rem;
+        --spacing-xl: 2.4rem;
+    }
+
     .container {
-        padding: 10px;
+        padding: var(--spacing-md);
     }
 
     .header {
-        padding: 20px;
+        padding: var(--spacing-lg) var(--spacing-md);
     }
 
     .logo {
-        font-size: 2rem;
+        font-size: 2.2rem;
+    }
+
+    .subtitle {
+        font-size: 1rem;
     }
 
     .main {
-        padding: 20px;
+        padding: var(--spacing-lg);
     }
 
     .newspapers-list {
         grid-template-columns: 1fr;
-        gap: 15px;
+        gap: var(--spacing-md);
     }
 
     .toolbar {
         flex-direction: column;
-        gap: 15px;
+        gap: var(--spacing-md);
         align-items: stretch;
+        text-align: center;
+    }
+
+    .toolbar::before,
+    .toolbar::after {
+        display: none;
     }
 
     .detail-header {
         flex-direction: column;
-        gap: 15px;
+        gap: var(--spacing-md);
         align-items: stretch;
+    }
+
+    .detail-header::before,
+    .detail-header::after {
+        width: 60px;
+        height: 3px;
+    }
+
+    .detail-content {
+        padding: var(--spacing-lg);
+        max-width: none;
+    }
+
+    .detail-content h1 {
+        font-size: 1.8rem;
+    }
+
+    .detail-content h2 {
+        font-size: 1.4rem;
+    }
+
+    .detail-content h2::before {
+        left: -15px;
+        font-size: 12px;
+    }
+
+    .detail-content h3 {
+        font-size: 1.2rem;
+        padding-left: var(--spacing-sm);
+    }
+
+    .detail-content p {
+        text-indent: 1.5em;
     }
 
     .detail-meta-grid {
         grid-template-columns: 1fr;
+        gap: var(--spacing-sm);
     }
 
     .pagination {
         flex-wrap: wrap;
-        gap: 5px;
+        gap: var(--spacing-xs);
+    }
+
+    .pagination button {
+        font-size: 12px;
+        padding: var(--spacing-xs) var(--spacing-sm);
+    }
+
+    .pagination-info {
+        width: 100%;
+        text-align: center;
+        margin: var(--spacing-xs) 0;
     }
 
     .toast {
-        right: 10px;
-        left: 10px;
+        right: var(--spacing-md);
+        left: var(--spacing-md);
         min-width: auto;
+        top: var(--spacing-md);
     }
 }
 
 @media (max-width: 480px) {
+    :root {
+        --spacing-xs: 0.3rem;
+        --spacing-sm: 0.6rem;
+        --spacing-md: 1rem;
+        --spacing-lg: 1.4rem;
+        --spacing-xl: 2rem;
+    }
+
+    .container {
+        padding: var(--spacing-sm);
+    }
+
+    .logo {
+        font-size: 1.8rem;
+    }
+
+    .subtitle {
+        font-size: 0.9rem;
+    }
+
+    .newspaper-card {
+        padding: var(--spacing-md);
+    }
+
+    .newspaper-title {
+        font-size: 1.1rem;
+    }
+
     .detail-content {
-        padding: 20px;
+        padding: var(--spacing-md);
     }
 
     .detail-content h1 {
@@ -524,6 +1188,106 @@ body {
     }
 
     .detail-content h2 {
-        font-size: 1.3rem;
+        font-size: 1.2rem;
     }
+
+    .detail-content h2::before {
+        display: none;
+    }
+
+    .detail-content h3 {
+        font-size: 1.1rem;
+        padding-left: 0;
+    }
+
+    .detail-content h3::before {
+        display: none;
+    }
+
+    .detail-content p {
+        text-indent: 1em;
+        font-size: 15px;
+    }
+
+    .detail-meta {
+        padding: var(--spacing-md);
+    }
+
+    .btn-refresh,
+    .btn-back,
+    .btn-refresh-detail {
+        font-size: 12px;
+        padding: 6px 12px;
+    }
+}
+
+/* 源信息说明样式 */
+.source-info {
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: rgba(217, 118, 52, 0.1);
+    border: 1px solid var(--accent-orange);
+    border-radius: 8px;
+    position: relative;
+}
+
+.source-text {
+    font-size: 14px;
+    color: var(--gray-medium);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    font-weight: 500;
+    text-align: center;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-xs);
+    flex-wrap: wrap;
+}
+
+.source-text i:first-child {
+    color: var(--accent-orange);
+    font-size: 14px;
+}
+
+.bilibili-link {
+    color: var(--primary-brown);
+    text-decoration: none;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.bilibili-link:hover {
+    color: var(--accent-orange);
+    text-decoration: none;
+    background: rgba(217, 118, 52, 0.1);
+    transform: translateY(-1px);
+}
+
+.bilibili-link i {
+    font-size: 16px;
+    color: var(--accent-orange);
+}
+
+.bilibili-link:hover i {
+    color: var(--accent-orange);
+}
+
+/* 页脚链接样式 */
+.footer a {
+    color: var(--primary-brown);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+.footer a:hover {
+    color: var(--accent-orange);
+    text-decoration: underline;
 }
