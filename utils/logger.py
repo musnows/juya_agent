@@ -54,7 +54,7 @@ def _setup_unified_logger(log_level: str) -> logging.Logger:
     # Create concise formatter (single line, no emojis)
     formatter = logging.Formatter(
         fmt='%(asctime)s [%(levelname)s] %(message)s',
-        datefmt='%H:%M:%S'
+        datefmt='%Y-%m-%d %H:%M:%S'
     )
 
     # File handler
