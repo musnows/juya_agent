@@ -88,6 +88,20 @@ git submodule update --init
 - you-get: 用于下载B站视频，项目链接：<https://github.com/soimort/you-get>。可以使用`pip3 install you-get`或者`brew install you-get`安装。
 - ffmpeg: 将视频转为mp3，用于请求腾讯云语音SDK。可以使用`brew install ffmpeg`或`sudo apt install -y ffmpeg`安装。
 
+请先尝试使用you-get命令确认视频能够正常下载
+
+```sh
+you-get 'https://www.bilibili.com/video/BV1ufkzBvEug/'
+```
+
+若出现错误，请尝试使用chrome/edge的`Cookies txt`插件，导出B站的Cookies.txt文件，将该文件放入本项目的`config/cookies.txt`下，使用cookie重试
+
+```sh
+you-get 'https://www.bilibili.com/video/BV1ufkzBvEug/' --cookies config/cookies.txt
+```
+
+若使用cookies，还是无法下载视频，请在you-get仓库提交issue/pr咨询问题原因。
+
 ### 2. 配置环境变量
 
 创建 `.env` 文件：
