@@ -301,21 +301,27 @@ class VideoFallbackProcessor:
             self.logger.error(f"Speech recognition failed: {e}")
             return None
 
-    def process_video_fallback(self, bvid: str, video_info: Dict) -> Optional[List[str]]:
+    def process_video_fallback(self, bvid: str, video_info: Dict, report_date: str = None) -> Optional[List[str]]:
         """
         执行完整的视频兜底处理流程
 
         Args:
             bvid: BV号
             video_info: 视频信息
+            report_date: 早报日期字符串(YYYYMMDD格式)，如果为None则使用当前日期
 
         Returns:
             List[str]|None: 识别的文字结果，失败时返回None
         """
         self.logger.info("Starting video fallback processing workflow")
 
-        # 1. 生成日期目录
-        date_str = datetime.now().strftime('%Y%m%d')
+        # 1. 确定日期目录
+        if report_date is None:
+            date_str = datetime.now().strftime('%Y%m%d')
+            self.logger.info(f"Using current date: {date_str}")
+        else:
+            date_str = report_date
+            self.logger.info(f"Using provided report date: {date_str}")
 
         # 2. 下载视频
         video_path = self.download_video(bvid, date_str)

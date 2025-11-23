@@ -202,6 +202,7 @@ class JuyaProcessor:
             video_info = self.api.get_video_info(bvid)
             video_date = datetime.fromtimestamp(video_info['pubdate'])
             date_str = video_date.strftime('%Y-%m-%d')
+            date_str_yyyymmdd = video_date.strftime('%Y%m%d')  # 用于视频下载的日期格式
             filename = f"{date_str}_AI早报_{bvid}.md"
             filepath = DOCS_DIR / filename
 
@@ -225,7 +226,7 @@ class JuyaProcessor:
 
             if self.fallback_processor.should_trigger_fallback(video_info):
                 self.logger.info("Triggering video fallback processing logic")
-                speech_texts = self.fallback_processor.process_video_fallback(bvid, video_info)
+                speech_texts = self.fallback_processor.process_video_fallback(bvid, video_info, date_str_yyyymmdd)
                 should_use_fallback = speech_texts is not None
 
             if not subtitle and not should_use_fallback:
