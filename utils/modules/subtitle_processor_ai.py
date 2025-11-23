@@ -480,7 +480,7 @@ class AISubtitleProcessor:
         speech_texts = processed_data.get('speech_texts', [])
         if speech_texts:
             # 添加兜底逻辑说明
-            md_lines.append("> **IMPORTANT NOTICE**: Due to lack of video description, current report was generated using speech-to-text. Content may contain transcription errors, please refer to original video for accuracy.\n")
+            md_lines.append("> **重要说明**: 由于缺少视频简介，本早报由视频语音转写生成，早报内容因语音转写误差可能会有部分失真，请以原视频为准。\n")
             md_lines.append("---\n")
 
         # 元信息

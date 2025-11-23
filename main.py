@@ -251,7 +251,7 @@ class JuyaProcessor:
             self.logger.info(f"Document generated: {filepath}")
 
             # 生成JSON文件
-            json_filepath = self._generate_json_file(processed_data, video_info, bvid, filepath)
+            json_filepath = self._generate_json_file(processed_data, video_info, bvid, filepath, should_use_fallback)
             self.logger.info(f"JSON file generated: {json_filepath}")
 
             # 更新处理记录
@@ -270,13 +270,13 @@ class JuyaProcessor:
             self.logger.error(f"Failed to process video: {e}")
             return False
     
-    def _generate_json_file(self, processed_data: Dict, video_info: Dict, bvid: str, md_filepath: str) -> str:
+    def _generate_json_file(self, processed_data: Dict, video_info: Dict, bvid: str, md_filepath: str, video_fallback: bool = False) -> str:
         """生成JSON文件"""
         try:
             # 提取新闻数据
             news_items = processed_data.get('news_items', [])
             overview = processed_data.get('overview', {})
-            
+
             # 构建data数组
             data_array = []
             for index,item in enumerate(news_items, 1):
@@ -286,13 +286,14 @@ class JuyaProcessor:
                     "content": item.get('content', ''),
                     "sources": item.get('sources',[])
                 })
-            
+
             # 构建完整的JSON结构
             json_data = {
                 "data": data_array,
                 "created_time": overview.get('processed_time', datetime.now().strftime('%Y-%m-%d %H:%M:%S')),
                 "title": video_info.get('title', ''),
-                "date": overview.get('publish_date', datetime.fromtimestamp(video_info.get('pubdate', 0)).strftime('%Y-%m-%d'))
+                "date": overview.get('publish_date', datetime.fromtimestamp(video_info.get('pubdate', 0)).strftime('%Y-%m-%d')),
+                "video_fallback": video_fallback
             }
             
             # 生成JSON文件路径（与MD文件同目录同名）
