@@ -80,7 +80,7 @@ npm install -g schedule-task-mcp
 同时还需要配置submodule的腾讯云语音SDK（必须初始化）
 
 ```sh
-git submodule init --update
+git submodule update --init
 ```
 
 如需要使用腾讯云兜底逻辑，则必须配置腾讯云SDK里面的appid、密钥等环境变量，同时需要安装两个第三方工具用于下载和处理视频
