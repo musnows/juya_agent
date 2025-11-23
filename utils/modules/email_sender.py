@@ -37,8 +37,8 @@ class EmailSender:
             smtp_server: SMTP 服务器地址
             smtp_port: SMTP 端口
         """
-        # 初始化日志器
-        self.logger = get_logger("email_sender")
+        # 使用统一的日志器
+        self.logger = get_logger()
         # 如果未提供参数，从项目根目录的 .env 读取，避免依赖当前工作目录
         load_dotenv(PROJECT_ROOT / ".env")
 
@@ -99,41 +99,41 @@ class EmailSender:
                             server.starttls()
                             server.ehlo()
                         else:
-                            self.logger.warning("⚠️ 服务器不支持 STARTTLS，使用未加密连接继续发送")
+                            self.logger.warning("Server does not support STARTTLS, continuing with unencrypted connection")
                     server.login(self.from_email, self.smtp_password)
                     server.send_message(msg)
 
-                self.logger.info(f"✅ 邮件发送成功（第 {attempt} 次尝试）")
+                self.logger.info(f"Email sent successfully (attempt {attempt})")
                 return True
 
             except smtplib.SMTPException as e:
-                self.logger.error(f"❌ SMTP 错误（第 {attempt}/{max_retries} 次）: {e}")
+                self.logger.error(f"SMTP error (attempt {attempt}/{max_retries}): {e}")
                 if attempt < max_retries:
                     wait_time = attempt * 2  # 递增等待时间：2秒、4秒、6秒...
-                    self.logger.info(f"⏳ {wait_time} 秒后重试...")
+                    self.logger.info(f"Retrying in {wait_time} seconds...")
                     time.sleep(wait_time)
                 else:
-                    self.logger.error(f"❌ 已达到最大重试次数，邮件发送失败")
+                    self.logger.error("Max retry attempts reached, email sending failed")
                     return False
 
             except (ConnectionError, TimeoutError, OSError) as e:
-                self.logger.error(f"❌ 连接错误（第 {attempt}/{max_retries} 次）: {type(e).__name__}: {e}")
+                self.logger.error(f"Connection error (attempt {attempt}/{max_retries}): {type(e).__name__}: {e}")
                 if attempt < max_retries:
                     wait_time = attempt * 2
-                    self.logger.info(f"⏳ {wait_time} 秒后重试...")
+                    self.logger.info(f"Retrying in {wait_time} seconds...")
                     time.sleep(wait_time)
                 else:
-                    self.logger.error(f"❌ 已达到最大重试次数，邮件发送失败")
+                    self.logger.error("Max retry attempts reached, email sending failed")
                     return False
 
             except Exception as e:
-                self.logger.error(f"❌ 邮件发送失败（第 {attempt}/{max_retries} 次）: {type(e).__name__}: {e}")
+                self.logger.error(f"Email sending failed (attempt {attempt}/{max_retries}): {type(e).__name__}: {e}")
                 if attempt < max_retries:
                     wait_time = attempt * 2
-                    self.logger.info(f"⏳ {wait_time} 秒后重试...")
+                    self.logger.info(f"Retrying in {wait_time} seconds...")
                     time.sleep(wait_time)
                 else:
-                    self.logger.error(f"❌ 已达到最大重试次数，邮件发送失败")
+                    self.logger.error("Max retry attempts reached, email sending failed")
                     return False
 
         return False
@@ -153,7 +153,7 @@ class EmailSender:
         Returns:
             发送是否成功
         """
-        subject = f"📺 橘鸦新视频：{video_title[:50]}"
+        subject = f"Juya New Video: {video_title[:50]}"
 
         # 在 HTML 末尾添加文件路径提示
         if markdown_path:

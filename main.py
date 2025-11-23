@@ -43,8 +43,8 @@ JUYA_UID = 285286947
 DOCS_DIR.mkdir(exist_ok=True)
 (PROJECT_ROOT / "data").mkdir(exist_ok=True)
 
-# 创建全局日志器
-logger = get_logger("juya_main")
+# 使用统一的日志器
+logger = get_logger()
 
 
 class JuyaProcessor:
@@ -52,8 +52,8 @@ class JuyaProcessor:
 
     def __init__(self):
         """初始化处理器"""
-        # 初始化日志器
-        self.logger = get_logger("juya_processor")
+        # 使用统一的日志器
+        self.logger = get_logger()
 
         # 初始化各个模块
         self.api = self._get_bili_api()
@@ -111,10 +111,7 @@ class JuyaProcessor:
 
         # 调试信息
         if title_has_ai or desc_has_ai:
-            self.logger.info(f"🔍 检查视频: {title[:50]}...")
-            self.logger.info(f"   AI关键词: {title_has_ai or desc_has_ai}")
-            self.logger.info(f"   是否{date_str}: {is_target_date}")
-            self.logger.info(f"   视频日期: {video_date.date()}, {date_str}: {date.today() if not target_date else target_date}")
+            self.logger.info(f"Checking video: {title[:50]}..., AI keywords: {title_has_ai or desc_has_ai}, is {date_str}: {is_target_date}, video date: {video_date.date()}, target: {date.today() if not target_date else target_date}")
 
         return (title_has_ai or desc_has_ai) and is_target_date
     
@@ -125,14 +122,14 @@ class JuyaProcessor:
         # 搜索docs目录下包含今日日期的md文件
         for md_file in DOCS_DIR.glob(f"*{today_str}*.md"):
             if md_file.is_file():
-                self.logger.info(f"✅ 发现今日早报文件: {md_file.name}")
+                self.logger.info(f"Found today's report file: {md_file.name}")
                 return True
         
         return False
     
     def get_latest_ai_report(self) -> Optional[str]:
         """获取最新的AI早报视频BV号"""
-        self.logger.info("🔍 正在搜索最新的AI早报视频...")
+        self.logger.info("Searching for latest AI report video...")
 
         # 获取最近20个视频
         videos = self.api.get_user_videos(uid=JUYA_UID, page_size=20)
@@ -141,15 +138,15 @@ class JuyaProcessor:
             if self._is_ai_early_report(video):
                 bvid = video['bvid']
                 title = video['title']
-                self.logger.info(f"✅ 找到AI早报视频: {title} ({bvid})")
+                self.logger.info(f"Found AI report video: {title} ({bvid})")
                 return bvid
 
-        self.logger.warning("❌ 未找到今日的AI早报视频")
+        self.logger.warning("No AI report video found for today")
         return None
 
     def get_ai_reports_by_date_range(self, start_date: date, end_date: date) -> List[Dict]:
         """获取指定日期范围内的所有AI早报视频"""
-        self.logger.info(f"🔍 正在搜索 {start_date.strftime('%Y-%m-%d')} 到 {end_date.strftime('%Y-%m-%d')} 的AI早报视频...")
+        self.logger.info(f"Searching for AI report videos from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
 
         ai_reports = []
 
@@ -161,7 +158,7 @@ class JuyaProcessor:
         estimated_videos_needed = days_count * 10  # 估算每天最多10个视频
         page_size = min(estimated_videos_needed, 50)  # B站API限制最多50个
 
-        self.logger.info(f"📥 获取最近 {page_size} 个视频...")
+        self.logger.info(f"Fetching {page_size} videos...")
 
         # 获取更多视频来覆盖历史日期范围
         videos = self.api.get_user_videos(uid=JUYA_UID, page_size=page_size)
@@ -184,21 +181,21 @@ class JuyaProcessor:
                 # 选择当天最新的视频（通常是发布时间最晚的）
                 latest_video = max(daily_videos, key=lambda x: x['pubdate'])
                 ai_reports.append(latest_video)
-                self.logger.info(f"✅ {current_date.strftime('%Y-%m-%d')}: 找到AI早报 {latest_video['title']}")
+                self.logger.info(f"Found AI report for {current_date.strftime('%Y-%m-%d')}: {latest_video['title']}")
             else:
-                self.logger.warning(f"⚠️ {current_date.strftime('%Y-%m-%d')}: 未找到AI早报")
+                self.logger.warning(f"No AI report found for {current_date.strftime('%Y-%m-%d')}")
 
             current_date += timedelta(days=1)
 
         # 按日期排序（最新的在前面）
         ai_reports.sort(key=lambda x: x['date'], reverse=True)
 
-        self.logger.info(f"📊 总共找到 {len(ai_reports)} 个AI早报视频")
+        self.logger.info(f"Found {len(ai_reports)} AI report videos in total")
         return ai_reports
     
     def process_video(self, bvid: str, force_regenerate: bool = False) -> bool:
         """处理单个视频"""
-        self.logger.info(f"🎬 开始处理视频: {bvid}")
+        self.logger.info(f"Starting video processing: {bvid}")
 
         try:
             # 获取视频信息
@@ -210,17 +207,16 @@ class JuyaProcessor:
 
             # 检查是否已处理
             if not force_regenerate and filepath.exists():
-                self.logger.info(f"📄 文档已存在，跳过重新生成: {filepath}")
+                self.logger.info(f"Document already exists, skipping regeneration: {filepath}")
                 return True
 
             # 检查是否应该跳过文件生成（简介短且无SDK配置）
             if self.fallback_processor.should_skip_file_generation(video_info):
-                self.logger.info("🚫 跳过文件生成")
-                self.logger.info("   原因：视频简介长度小于30字符且腾讯云语音SDK未配置")
+                self.logger.info("Skipping file generation: video description too short and Tencent Cloud SDK not configured")
                 return False
 
             # 获取字幕
-            self.logger.info("📥 获取字幕...")
+            self.logger.info("Fetching subtitles...")
             subtitle = self.api.get_subtitle(bvid)
 
             # 检查是否需要触发兜底逻辑
@@ -228,15 +224,15 @@ class JuyaProcessor:
             should_use_fallback = False
 
             if self.fallback_processor.should_trigger_fallback(video_info):
-                self.logger.info("🔄 触发视频兜底处理逻辑")
+                self.logger.info("Triggering video fallback processing logic")
                 speech_texts = self.fallback_processor.process_video_fallback(bvid, video_info)
                 should_use_fallback = speech_texts is not None
 
             if not subtitle and not should_use_fallback:
-                self.logger.warning("⚠️ 视频没有字幕，且未触发兜底逻辑，将使用视频简介提取新闻...")
+                self.logger.warning("Video has no subtitles and fallback not triggered, using video description to extract news...")
 
             # 处理字幕/简介/语音转文字
-            self.logger.info("🤖 AI整理早报中...")
+            self.logger.info("Processing AI report generation...")
             processed_data = self.processor.process(
                 subtitle if subtitle else [],
                 video_info,
@@ -244,18 +240,18 @@ class JuyaProcessor:
             )
 
             # 生成Markdown文档
-            self.logger.info("📝 生成文档...")
+            self.logger.info("Generating document...")
             markdown = self.processor.format_markdown(processed_data)
 
             # 保存Markdown文档
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(markdown)
 
-            self.logger.info(f"✅ 文档已生成: {filepath}")
+            self.logger.info(f"Document generated: {filepath}")
 
             # 生成JSON文件
             json_filepath = self._generate_json_file(processed_data, video_info, bvid, filepath)
-            self.logger.info(f"✅ JSON文件已生成: {json_filepath}")
+            self.logger.info(f"JSON file generated: {json_filepath}")
 
             # 更新处理记录
             processed = self._load_processed_videos()
@@ -270,7 +266,7 @@ class JuyaProcessor:
             return True
 
         except Exception as e:
-            self.logger.error(f"❌ 处理视频失败: {e}")
+            self.logger.error(f"Failed to process video: {e}")
             return False
     
     def _generate_json_file(self, processed_data: Dict, video_info: Dict, bvid: str, md_filepath: str) -> str:
@@ -309,7 +305,7 @@ class JuyaProcessor:
             return str(json_filepath)
             
         except Exception as e:
-            self.logger.error(f"❌ 生成JSON文件失败: {e}")
+            self.logger.error(f"Failed to generate JSON file: {e}")
             # 返回默认路径
             md_path = Path(md_filepath)
             return str(md_path.with_suffix('.json'))
@@ -319,18 +315,18 @@ class JuyaProcessor:
         try:
             to_email = to_email or os.getenv('EMAIL_TO')
             if not to_email:
-                self.logger.error("❌ 未配置收件人邮箱")
+                self.logger.error("Recipient email not configured")
                 return False
 
             # 检查处理记录
             processed = self._load_processed_videos()
             if bvid not in processed:
-                self.logger.error(f"❌ 视频 {bvid} 尚未处理")
+                self.logger.error(f"Video {bvid} not yet processed")
                 return False
 
             md_path = processed[bvid].get('subtitle_path')
             if not md_path or not os.path.exists(md_path):
-                self.logger.error(f"❌ 未找到处理文档: {md_path}")
+                self.logger.error(f"Processed document not found: {md_path}")
                 return False
             
             # 获取视频信息
@@ -349,14 +345,14 @@ class JuyaProcessor:
             )
             
             if success:
-                self.logger.info(f"✅ 邮件已发送到 {to_email}")
+                self.logger.info(f"Email sent to {to_email}")
             else:
-                self.logger.error("❌ 邮件发送失败")
+                self.logger.error("Failed to send email")
 
             return success
 
         except Exception as e:
-            self.logger.error(f"❌ 发送邮件失败: {e}")
+            self.logger.error(f"Failed to send email: {e}")
             return False
     
     def _generate_email_html(self, md_path: str) -> str:
@@ -383,19 +379,19 @@ class JuyaProcessor:
 
     def process_history_reports(self, days: int = 30, force_regenerate: bool = False) -> Dict:
         """处理历史AI早报"""
-        self.logger.info(f"📚 开始处理历史 {days} 天的AI早报...")
+        self.logger.info(f"Starting history processing for {days} days...")
 
         # 计算日期范围
         end_date = date.today() - timedelta(days=1)  # 不包括今天
         start_date = end_date - timedelta(days=days - 1)
 
-        self.logger.info(f"📅 处理日期范围: {start_date.strftime('%Y-%m-%d')} 到 {end_date.strftime('%Y-%m-%d')}")
+        self.logger.info(f"Processing date range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
 
         # 获取日期范围内的所有AI早报视频
         ai_reports = self.get_ai_reports_by_date_range(start_date, end_date)
 
         if not ai_reports:
-            self.logger.warning("❌ 未找到任何历史AI早报视频")
+            self.logger.warning("No historical AI report videos found")
             return {
                 'total_found': 0,
                 'total_processed': 0,
@@ -415,8 +411,7 @@ class JuyaProcessor:
             title = report['title']
             report_date = report['date']
 
-            self.logger.info(f"\n🎬 处理 {report_date} 的视频: {title}")
-            self.logger.info(f"   BV号: {bvid}")
+            self.logger.info(f"Processing video for {report_date}: {title} (BV: {bvid})")
 
             # 检查是否已存在文档
             video_info = self.api.get_video_info(bvid)
@@ -426,7 +421,7 @@ class JuyaProcessor:
             filepath = DOCS_DIR / filename
 
             if not force_regenerate and filepath.exists():
-                self.logger.info(f"   ⏭️  文档已存在，跳过: {filename}")
+                self.logger.info(f"Document already exists, skipping: {filename}")
                 skipped_count += 1
                 results.append({
                     'date': report_date,
@@ -449,7 +444,7 @@ class JuyaProcessor:
                     'status': 'success',
                     'reason': '处理成功'
                 })
-                self.logger.info(f"   ✅ 处理成功")
+                self.logger.info("Processing completed successfully")
             else:
                 failed_count += 1
                 results.append({
@@ -459,14 +454,10 @@ class JuyaProcessor:
                     'status': 'failed',
                     'reason': '处理失败'
                 })
-                self.logger.error(f"   ❌ 处理失败")
+                self.logger.error("Processing failed")
 
         # 生成处理报告
-        self.logger.info(f"\n📊 历史处理完成统计:")
-        self.logger.info(f"   找到视频: {len(ai_reports)} 个")
-        self.logger.info(f"   成功处理: {processed_count} 个")
-        self.logger.info(f"   跳过已存在: {skipped_count} 个")
-        self.logger.info(f"   处理失败: {failed_count} 个")
+        self.logger.info(f"History processing summary: found={len(ai_reports)}, processed={processed_count}, skipped={skipped_count}, failed={failed_count}")
 
         return {
             'total_found': len(ai_reports),
@@ -484,19 +475,19 @@ class JuyaProcessor:
 def single_run(processor: JuyaProcessor, send_email: bool = False, generate_web: bool = False):
     """单次运行模式：获取最新AI早报"""
     logger.info("="*60)
-    logger.info("🚀 单次运行模式 - 获取最新AI早报")
+    logger.info("Single run mode - fetching latest AI report")
     logger.info("="*60)
 
     # 获取最新AI早报视频
     bvid = processor.get_latest_ai_report()
     if not bvid:
-        logger.error("❌ 未找到AI早报视频")
+        logger.error("No AI report video found")
         return False
 
     # 处理视频
     success = processor.process_video(bvid)
     if not success:
-        logger.error("❌ 处理视频失败")
+        logger.error("Failed to process video")
         return False
 
     # 发送邮件（如果需要）
@@ -505,28 +496,28 @@ def single_run(processor: JuyaProcessor, send_email: bool = False, generate_web:
 
     # 生成静态前端（如果需要）
     if generate_web:
-        logger.info("\n🌐 生成静态前端网站...")
+        logger.info("Generating static frontend website...")
         web_generator = WebGenerator(DOCS_DIR, DIST_DIR)
         web_result = web_generator.generate_static_site()
         if web_result:
-            logger.info("✅ 静态前端网站已更新")
+            logger.info("Static frontend website updated")
         else:
-            logger.error("❌ 静态前端网站生成失败")
+            logger.error("Failed to generate static frontend website")
 
-    logger.info("✅ 单次运行完成")
+    logger.info("Single run completed")
     return True
 
 
 def bv_run(processor: JuyaProcessor, bvid: str, send_email: bool = False, generate_web: bool = False, force: bool = False):
     """指定BV号运行模式"""
     logger.info("="*60)
-    logger.info(f"🎯 指定BV号运行模式 - {bvid}")
+    logger.info(f"Specified BV mode - {bvid}")
     logger.info("="*60)
 
     # 处理视频
     success = processor.process_video(bvid, force_regenerate=force)
     if not success:
-        logger.error("❌ 处理视频失败")
+        logger.error("Failed to process video")
         return False
 
     # 发送邮件（如果需要）
@@ -535,26 +526,26 @@ def bv_run(processor: JuyaProcessor, bvid: str, send_email: bool = False, genera
 
     # 生成静态前端（如果需要）
     if generate_web:
-        logger.info("\n🌐 生成静态前端网站...")
+        logger.info("Generating static frontend website...")
         web_generator = WebGenerator(DOCS_DIR, DIST_DIR)
         web_result = web_generator.generate_static_site()
         if web_result:
-            logger.info("✅ 静态前端网站已更新")
+            logger.info("Static frontend website updated")
         else:
-            logger.error("❌ 静态前端网站生成失败")
+            logger.error("Failed to generate static frontend website")
 
-    logger.info("✅ BV号运行完成")
+    logger.info("BV mode completed")
     return True
 
 
 def loop_run(processor: JuyaProcessor, send_email: bool = False, generate_web: bool = False):
     """定时运行模式：每15分钟检测一次，0-7点跳过检查"""
     logger.info("="*60)
-    logger.info("⏰ 定时运行模式 - 每15分钟检测一次，0-7点跳过检查")
+    logger.info("Scheduled run mode - checking every 15 minutes, skipping 0-7 hours")
     logger.info("="*60)
 
     if generate_web:
-        logger.info("🌐 启用自动前端更新模式")
+        logger.info("Auto frontend update mode enabled")
 
     check_interval = 900  # 15分钟
 
@@ -565,16 +556,15 @@ def loop_run(processor: JuyaProcessor, send_email: bool = False, generate_web: b
 
             # 检查是否在跳过时间（0-7点）
             if 0 <= current_hour < 7:
-                logger.info(f"\n🌙 当前时间 {current_time.strftime('%Y-%m-%d %H:%M:%S')} 处于跳过时段（0-7点），不进行检测")
-                logger.info(f"💤 等待 {check_interval // 60} 分钟后进行下次检测...")
+                logger.info(f"Current time {current_time.strftime('%Y-%m-%d %H:%M:%S')} in skip period (0-7 hours), waiting {check_interval // 60} minutes")
                 time.sleep(check_interval)
                 continue
 
-            logger.info(f"\n🕐 {current_time.strftime('%Y-%m-%d %H:%M:%S')} - 开始检测...")
+            logger.info(f"Starting check at {current_time.strftime('%Y-%m-%d %H:%M:%S')}")
 
             # 检查今日是否已有报告
             if processor._check_today_report_exists():
-                logger.info("📄 今日AI早报已存在，跳过本次检测")
+                logger.info("Today's AI report already exists, skipping this check")
             else:
                 # 获取最新AI早报
                 bvid = processor.get_latest_ai_report()
@@ -588,29 +578,29 @@ def loop_run(processor: JuyaProcessor, send_email: bool = False, generate_web: b
 
                         # 生成静态前端（如果需要）
                         if generate_web:
-                            logger.info("🌐 更新静态前端网站...")
+                            logger.info("Updating static frontend website...")
                             web_generator = WebGenerator(DOCS_DIR, DIST_DIR)
                             web_result = web_generator.generate_static_site()
                             if web_result:
-                                logger.info("✅ 静态前端网站已更新")
+                                logger.info("Static frontend website updated")
                             else:
-                                logger.error("❌ 静态前端网站生成失败")
+                                logger.error("Failed to generate static frontend website")
                 else:
-                    logger.info("📭 暂无新的AI早报")
+                    logger.info("No new AI reports available")
 
-            logger.info(f"💤 等待 {check_interval // 60} 分钟后进行下次检测...")
+            logger.info(f"Waiting {check_interval // 60} minutes for next check...")
             time.sleep(check_interval)
 
     except KeyboardInterrupt:
-        logger.info("\n👋 定时运行已停止")
+        logger.info("Scheduled run stopped")
     except Exception as e:
-        logger.error(f"❌ 定时运行出错: {e}")
+        logger.error(f"Scheduled run error: {e}")
 
 
 def history_run(processor: JuyaProcessor, days: int = 30, force: bool = False, generate_web: bool = False):
     """历史运行模式：处理指定天数的历史AI早报"""
     logger.info("="*60)
-    logger.info(f"📚 历史运行模式 - 处理最近 {days} 天的AI早报")
+    logger.info(f"History run mode - processing {days} days of AI reports")
     logger.info("="*60)
 
     # 处理历史报告
@@ -618,14 +608,9 @@ def history_run(processor: JuyaProcessor, days: int = 30, force: bool = False, g
 
     # 生成处理报告
     if result['total_found'] > 0:
-        logger.info(f"\n🎉 历史处理完成！")
-        logger.info(f"📋 处理摘要:")
-        logger.info(f"   处理时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        logger.info(f"   日期范围: {result['date_range']['start']} 到 {result['date_range']['end']}")
-        logger.info(f"   找到视频: {result['total_found']} 个")
-        logger.info(f"   成功处理: {result['total_processed']} 个")
-        logger.info(f"   跳过已存在: {result['total_skipped']} 个")
-        logger.info(f"   处理失败: {result['total_failed']} 个")
+        logger.info(f"History processing completed at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        logger.info(f"Date range: {result['date_range']['start']} to {result['date_range']['end']}")
+        logger.info(f"Summary: found={result['total_found']}, processed={result['total_processed']}, skipped={result['total_skipped']}, failed={result['total_failed']}")
 
         # 保存处理报告
         report_filename = f"history_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
@@ -634,19 +619,19 @@ def history_run(processor: JuyaProcessor, days: int = 30, force: bool = False, g
         with open(report_path, 'w', encoding='utf-8') as f:
             json.dump(result, f, ensure_ascii=False, indent=2)
 
-        logger.info(f"📄 详细报告已保存: {report_path}")
+        logger.info(f"Detailed report saved: {report_path}")
 
         # 生成静态前端（如果需要）
         if generate_web:
-            logger.info("\n🌐 生成静态前端网站...")
+            logger.info("Generating static frontend website...")
             web_generator = WebGenerator(DOCS_DIR, DIST_DIR)
             web_result = web_generator.generate_static_site()
             if web_result:
-                logger.info("✅ 静态前端网站已更新")
+                logger.info("Static frontend website updated")
             else:
-                logger.error("❌ 静态前端网站生成失败")
+                logger.error("Failed to generate static frontend website")
     else:
-        logger.warning("❌ 未找到任何历史AI早报视频")
+        logger.warning("No historical AI report videos found")
 
     return result
 
@@ -654,7 +639,7 @@ def history_run(processor: JuyaProcessor, days: int = 30, force: bool = False, g
 def web_run(processor: JuyaProcessor):
     """Web运行模式：生成静态前端网站"""
     logger.info("="*60)
-    logger.info("🌐 Web运行模式 - 生成静态前端网站")
+    logger.info("Web run mode - generating static frontend website")
     logger.info("="*60)
 
     try:
@@ -669,19 +654,19 @@ def web_run(processor: JuyaProcessor):
         result = web_generator.generate_static_site()
 
         if result:
-            logger.info("✅ 静态前端网站生成成功！")
-            logger.info(f"📂 输出目录: {DIST_DIR}")
-            logger.info(f"📄 主页面: {DIST_DIR}/index.html")
-            logger.info("\n🚀 要查看网站，请在浏览器中打开:")
-            logger.info(f"   file://{DIST_DIR}/index.html")
+            logger.info("Static frontend website generated successfully!")
+            logger.info(f"Output directory: {DIST_DIR}")
+            logger.info(f"Main page: {DIST_DIR}/index.html")
+            logger.info("To view the website, open in browser:")
+            logger.info(f"file://{DIST_DIR}/index.html")
         else:
-            logger.error("❌ 静态前端网站生成失败")
+            logger.error("Failed to generate static frontend website")
             return False
 
         return True
 
     except Exception as e:
-        logger.error(f"❌ 生成静态前端失败: {e}")
+        logger.error(f"Failed to generate static frontend: {e}")
         return False
 
 
@@ -740,7 +725,7 @@ def main():
     try:
         processor = JuyaProcessor()
     except Exception as e:
-        logger.error(f"❌ 初始化失败: {e}")
+        logger.error(f"Initialization failed: {e}")
         sys.exit(1)
 
     # 执行对应的运行模式
@@ -757,9 +742,9 @@ def main():
         elif mode == 'history':
             history_run(processor, days=args.history, force=args.force, generate_web=args.web)
     except KeyboardInterrupt:
-        logger.info("\n👋 程序已停止")
+        logger.info("Program stopped")
     except Exception as e:
-        logger.error(f"❌ 运行出错: {e}")
+        logger.error(f"Runtime error: {e}")
         sys.exit(1)
 
 

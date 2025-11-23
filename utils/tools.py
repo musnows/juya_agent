@@ -31,8 +31,8 @@ COOKIE_FILE = PROJECT_ROOT / "config" / "cookies.json"
 DOCS_DIR.mkdir(exist_ok=True)
 (PROJECT_ROOT / "data").mkdir(exist_ok=True)
 
-# 创建全局日志器
-logger = get_logger("tools")
+# 使用统一的日志器
+logger = get_logger()
 
 
 # ============= Pydantic Models =============
@@ -437,14 +437,14 @@ def process_video(
     # 检查文档文件是否已存在
     if not force_regenerate and filepath.exists():
         # 文档已存在，直接返回已有信息
-        logger.info(f"📄 文档已存在，跳过重新生成: {filepath}")
+        logger.info(f"Document already exists, skipping regeneration: {filepath}")
 
         # 从已存在的文档中解析资讯数量
         try:
             processed_data = _parse_markdown_to_data(str(filepath))
             news_count = processed_data['overview']['total_news']
         except Exception as e:
-            logger.error(f"⚠️ 解析文档失败: {e}")
+            logger.error(f"Failed to parse document: {e}")
             news_count = 0  # 解析失败时返回 0
 
         # 确保记录在 processed_videos.json 中
@@ -466,14 +466,14 @@ def process_video(
 
     # 需要处理：文档不存在 或 强制重新生成
     if force_regenerate:
-        logger.info(f"🔄 强制重新生成文档...")
+        logger.info("Force regenerate document...")
 
     # 获取字幕
     subtitle = api.get_subtitle(bvid)
 
     # 处理字幕（如果没有字幕，会使用视频简介作为备用）
     if not subtitle:
-        logger.warning(f"⚠️ 视频 {bvid} 没有字幕，将使用视频简介提取新闻...")
+        logger.warning(f"Video {bvid} has no subtitles, will use description to extract news...")
 
     processed_data = processor.process(subtitle if subtitle else [], video_info)
 
@@ -493,7 +493,7 @@ def process_video(
     }
     _save_processed_videos(processed_videos)
 
-    logger.info(f"✅ 文档已生成: {filepath}")
+    logger.info(f"Document generated: {filepath}")
 
     return ProcessResult(
         bvid=bvid,

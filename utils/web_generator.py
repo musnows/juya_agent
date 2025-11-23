@@ -28,8 +28,8 @@ class WebGenerator:
             docs_dir: 源文档目录路径
             output_dir: 输出目录路径
         """
-        # 初始化日志器
-        self.logger = get_logger("web_generator")
+        # 使用统一的日志器
+        self.logger = get_logger()
 
         self.docs_dir = Path(docs_dir)
         self.output_dir = Path(output_dir)
@@ -519,7 +519,7 @@ class WebGenerator:
 
         # 复制静态文件
         shutil.copytree(frontend_static_dir, target_static_dir)
-        self.logger.info(f"   ✅ 静态文件已复制到: {target_static_dir}")
+        self.logger.info(f"Static files copied to: {target_static_dir}")
 
     def _generate_json_data(self, newspapers: List[Dict]):
         """生成JSON数据文件"""
@@ -535,7 +535,7 @@ class WebGenerator:
         with open(json_filepath, 'w', encoding='utf-8') as f:
             json.dump(json_data, f, ensure_ascii=False, indent=2)
 
-        self.logger.info(f"   ✅ JSON数据已生成: {json_filepath}")
+        self.logger.info(f"JSON data generated: {json_filepath}")
 
     def _auto_git_commit(self):
         """自动Git提交更新
@@ -545,10 +545,10 @@ class WebGenerator:
         """
         dist_git_dir = self.output_dir / ".git"
         if not dist_git_dir.exists():
-            self.logger.info("\n📝 dist目录不是Git仓库，跳过自动提交")
+            self.logger.info("dist directory is not a Git repository, skipping auto commit")
             return
 
-        self.logger.info("\n🔄 检测到Git仓库，提交更新...")
+        self.logger.info("Detected Git repository, committing updates...")
         try:
             # 获取当前日期
             current_date = datetime.now().strftime("%Y-%m-%d")
@@ -556,49 +556,49 @@ class WebGenerator:
             # 执行git add --all
             subprocess.run(["git", "add", "--all"], check=True, capture_output=True, 
                            text=True, cwd=self.output_dir)
-            self.logger.info("   ✅ 已添加所有更改到暂存区")
+            self.logger.info("All changes added to staging area")
 
             # 执行git commit
             commit_message = f"update: daily report auto update {current_date}"
             subprocess.run(["git", "commit", "-m", commit_message], check=True, capture_output=True, 
                            text=True, cwd=self.output_dir)
-            self.logger.info(f"   ✅ 已提交更新: {commit_message}")
+            self.logger.info(f"Committed updates: {commit_message}")
 
             # 执行git push
             subprocess.run(["git", "push"], check=True, capture_output=True, text=True, 
                            cwd=self.output_dir, timeout=300)
-            self.logger.info(f"   ✅ 已完成push")
+            self.logger.info("Push completed successfully")
 
         except subprocess.CalledProcessError as e:
-            self.logger.error(f"   ❌ Git操作失败: {e}")
+            self.logger.error(f"Git operation failed: {e}")
         except Exception as e:
-            self.logger.error(f"   ❌ Git提交过程中出错: {e}")
+            self.logger.error(f"Error during Git commit process: {e}")
 
     def generate_static_site(self) -> bool:
         """生成完整的静态网站"""
         try:
-            self.logger.info("📚 加载早报数据...")
+            self.logger.info("Loading newspaper data...")
             newspapers = self._load_newspapers()
 
             if not newspapers:
-                self.logger.warning("⚠️ 没有找到早报数据")
+                self.logger.warning("No newspaper data found")
                 return False
 
-            self.logger.info(f"   📄 找到 {len(newspapers)} 个早报文件")
+            self.logger.info(f"Found {len(newspapers)} newspaper files")
 
-            self.logger.info("🌐 生成HTML页面...")
+            self.logger.info("Generating HTML pages...")
             # 生成首页HTML
             index_html = self._generate_html_index(newspapers)
             index_filepath = self.output_dir / 'index.html'
             with open(index_filepath, 'w', encoding='utf-8') as f:
                 f.write(index_html)
-            self.logger.info(f"   ✅ 首页已生成: {index_filepath}")
+            self.logger.info(f"Homepage generated: {index_filepath}")
 
-            self.logger.info("📁 复制静态文件...")
+            self.logger.info("Copying static files...")
             # 复制CSS、JS、图片等静态文件
             self._copy_static_files()
 
-            self.logger.info("📊 生成JSON数据...")
+            self.logger.info("Generating JSON data...")
             # 生成JSON数据文件
             self._generate_json_data(newspapers)
 
@@ -629,7 +629,7 @@ class WebGenerator:
             with open(readme_filepath, 'w', encoding='utf-8') as f:
                 f.write(readme_content)
 
-            self.logger.info(f"   ✅ README文件已生成: {readme_filepath}")
+            self.logger.info(f"README file generated: {readme_filepath}")
 
             # 自动Git提交更新
             self._auto_git_commit()
@@ -637,5 +637,5 @@ class WebGenerator:
             return True
 
         except Exception as e:
-            self.logger.error(f"❌ 生成静态网站失败: {e}")
+            self.logger.error(f"Failed to generate static website: {e}")
             return False

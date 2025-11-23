@@ -29,12 +29,9 @@ from pathlib import Path
 # 加载环境变量
 load_dotenv()
 
-# 配置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# 使用统一的日志系统
+from utils.logger import get_logger
+logger = get_logger()
 
 
 def create_sampling_callback(base_agent):

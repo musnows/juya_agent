@@ -19,8 +19,8 @@ class AISubtitleProcessor:
     """AI驱动的字幕智能处理器"""
 
     def __init__(self):
-        # 初始化日志器
-        self.logger = get_logger("subtitle_processor")
+        # 使用统一的日志器
+        self.logger = get_logger()
 
         # 使用 OpenAI API
         api_key = os.getenv("OPENAI_API_KEY")
@@ -55,11 +55,11 @@ class AISubtitleProcessor:
             news_items = self._ai_extract_news(full_text, subtitle_data, desc_links)
         elif speech_texts is not None:
             # 兜底方案：使用语音转文字结果
-            self.logger.info("🔄 使用语音转文字结果提取新闻...")
+            self.logger.info("Using speech-to-text results to extract news...")
             news_items = self._extract_news_from_speech_text(speech_texts, desc_links)
         else:
             # 没有字幕且没有兜底方案时，使用视频简介作为备用
-            self.logger.warning("⚠️ 没有字幕，使用视频简介提取新闻...")
+            self.logger.warning("No subtitles available, using video description to extract news...")
             news_items = self._extract_news_from_description(video_info.get('desc', ''), desc_links)
 
         # 3. 生成概览
@@ -105,8 +105,8 @@ class AISubtitleProcessor:
                 current_time = title_match.group(2).strip()
                 continue
 
-            # 匹配链接行：🔗 https://...
-            link_match = re.match(r'🔗\s+(https?://[^\s]+)', line)
+            # 匹配链接行： https://...
+            link_match = re.match(r'\s+(https?://[^\s]+)', line)
             if link_match and current_title:
                 links_with_context.append({
                     'title': current_title,
@@ -279,7 +279,7 @@ class AISubtitleProcessor:
             新闻列表
         """
         if not description or len(description.strip()) < 50:
-            self.logger.warning("⚠️ 视频简介内容太少，无法提取新闻")
+            self.logger.warning("Video description too short to extract news")
             return []
 
         prompt = f"""你是一个专业的AI资讯编辑。请从以下视频简介中，提炼出结构化的新闻条目。
@@ -349,11 +349,11 @@ class AISubtitleProcessor:
                     'index': idx + 1
                 })
 
-            self.logger.info(f"✅ 从视频简介中提取到 {len(news_items)} 条新闻")
+            self.logger.info(f"Extracted {len(news_items)} news items from video description")
             return news_items
 
         except Exception as e:
-            self.logger.error(f"从简介提取新闻失败: {e}")
+            self.logger.error(f"Failed to extract news from description: {e}")
             # 如果AI提取失败，返回空列表
             return []
 
@@ -369,13 +369,13 @@ class AISubtitleProcessor:
             新闻列表
         """
         if not speech_texts:
-            self.logger.warning("⚠️ 语音识别结果为空，无法提取新闻")
+            self.logger.warning("Speech recognition result is empty, cannot extract news")
             return []
 
         # 合并所有声道的文本
         full_text = ' '.join(speech_texts)
 
-        self.logger.info(f"📝 开始从语音转文字结果中提取新闻，文本长度: {len(full_text)} 字符")
+        self.logger.info(f"Starting news extraction from speech-to-text, text length: {len(full_text)} characters")
 
         prompt = f"""你是一个专业的AI资讯编辑。请从以下AI早报的语音转文字内容中，提炼出结构化的新闻条目。
 
@@ -450,11 +450,11 @@ class AISubtitleProcessor:
                     'index': idx + 1
                 })
 
-            self.logger.info(f"✅ 从语音转文字结果中提取到 {len(news_items)} 条新闻")
+            self.logger.info(f"Extracted {len(news_items)} news items from speech-to-text result")
             return news_items
 
         except Exception as e:
-            self.logger.error(f"从语音转文字提取新闻失败: {e}")
+            self.logger.error(f"Failed to extract news from speech-to-text: {e}")
             # 如果AI提取失败，返回空列表
             return []
 
@@ -480,25 +480,25 @@ class AISubtitleProcessor:
         speech_texts = processed_data.get('speech_texts', [])
         if speech_texts:
             # 添加兜底逻辑说明
-            md_lines.append("> ⚠️ **重要说明**：因视频缺少简介，当前早报内容使用语音转写生成，内容因语音转写存在失真，请以原视频为准。\n")
+            md_lines.append("> **IMPORTANT NOTICE**: Due to lack of video description, current report was generated using speech-to-text. Content may contain transcription errors, please refer to original video for accuracy.\n")
             md_lines.append("---\n")
 
         # 元信息
-        md_lines.append(f"**📅 发布日期：** {overview['publish_date']}")
-        md_lines.append(f"**🎬 BV号：** [{overview['bvid']}](https://www.bilibili.com/video/{overview['bvid']})")
-        md_lines.append(f"**📝 整理时间：** {overview['processed_time']}")
-        md_lines.append(f"**📊 资讯数量：** {overview['total_news']} 条\n")
+        md_lines.append(f"** 发布日期：** {overview['publish_date']}")
+        md_lines.append(f"** BV号：** [{overview['bvid']}](https://www.bilibili.com/video/{overview['bvid']})")
+        md_lines.append(f"** 整理时间：** {overview['processed_time']}")
+        md_lines.append(f"** 资讯数量：** {overview['total_news']} 条\n")
         md_lines.append("---\n")
 
         # 概览（同时作为目录）
-        md_lines.append("## 📋 本期概览\n")
+        md_lines.append("##  本期概览\n")
         for item in news_items:
             category_emoji = {
-                '产品发布': '🚀',
-                '技术更新': '🔧',
-                '行业动态': '📈',
-                '其他': '📰'
-            }.get(item['category'], '📰')
+                '产品发布': '',
+                '技术更新': '',
+                '行业动态': '',
+                '其他': ''
+            }.get(item['category'], '')
             md_lines.append(f"{item['index']}. {category_emoji} {item['title']}")
         md_lines.append("\n---\n")
 
@@ -506,11 +506,11 @@ class AISubtitleProcessor:
 
         for item in news_items:
             category_emoji = {
-                '产品发布': '🚀',
-                '技术更新': '🔧',
-                '行业动态': '📈',
-                '其他': '📰'
-            }.get(item['category'], '📰')
+                '产品发布': '',
+                '技术更新': '',
+                '行业动态': '',
+                '其他': ''
+            }.get(item['category'], '')
 
             md_lines.append(f"### {item['index']}. {category_emoji} {item['title']} {{#{item['index']}-{self._slugify(item['title'])}}}\n")
 
@@ -524,7 +524,7 @@ class AISubtitleProcessor:
 
             # 来源链接
             if item['sources']:
-                md_lines.append("**🔗 相关链接：**")
+                md_lines.append("** 相关链接：**")
                 for link in item['sources']:
                     https_link = link.replace('http://','https://')
                     md_lines.append(f"- <{https_link}>")
@@ -534,7 +534,7 @@ class AISubtitleProcessor:
 
         # 页脚
         md_lines.append("---\n")
-        md_lines.append("## 🎬 视频链接\n")
+        md_lines.append("##  视频链接\n")
         md_lines.append(f"**Bilibili**： <https://www.bilibili.com/video/{overview['bvid']}>\n")
         md_lines.append("---\n")
         md_lines.append(f"*整理自橘鸦AI早报 | BV号：{overview['bvid']} | {overview['processed_time']}*")
@@ -662,12 +662,12 @@ class AISubtitleProcessor:
 </head>
 <body>
     <div class="container">
-        <h1>📺 {overview['video_title']}</h1>
+        <h1> {overview['video_title']}</h1>
 
         <div class="meta">
-            📅 发布日期：{overview['publish_date']} |
-            🎬 BV号：{overview['bvid']} |
-            📊 资讯数量：{overview['total_news']} 条
+             发布日期：{overview['publish_date']} |
+             BV号：{overview['bvid']} |
+             资讯数量：{overview['total_news']} 条
         </div>
 """
 
@@ -676,24 +676,24 @@ class AISubtitleProcessor:
         if speech_texts:
             html += """
         <div class="warning">
-            <strong>⚠️ 重要说明</strong>：因视频缺少简介，当前早报内容使用语音转写生成，内容因语音转写存在失真，请以原视频为准。
+            <strong> 重要说明</strong>：因视频缺少简介，当前早报内容使用语音转写生成，内容因语音转写存在失真，请以原视频为准。
         </div>
 """
 
         html += f"""
         <div class="overview">
-            <strong>📋 本期概览</strong>
+            <strong> 本期概览</strong>
             <div style="margin-top: 10px;">
 """
 
         # 概览中列出所有新闻标题（作为目录）
         for item in news_items:
             category_emoji = {
-                '产品发布': '🚀',
-                '技术更新': '🔧',
-                '行业动态': '📈',
-                '其他': '📰'
-            }.get(item['category'], '📰')
+                '产品发布': '',
+                '技术更新': '',
+                '行业动态': '',
+                '其他': ''
+            }.get(item['category'], '')
             html += f"""                <div class="overview-item">{item['index']}. {category_emoji} {item['title']}</div>
 """
 
@@ -704,11 +704,11 @@ class AISubtitleProcessor:
         # 详细内容部分（不需要 h2 标题）
         for item in news_items:
             category_emoji = {
-                '产品发布': '🚀',
-                '技术更新': '🔧',
-                '行业动态': '📈',
-                '其他': '📰'
-            }.get(item['category'], '📰')
+                '产品发布': '',
+                '技术更新': '',
+                '行业动态': '',
+                '其他': ''
+            }.get(item['category'], '')
 
             html += f"""
         <div class="news-item">
@@ -727,7 +727,7 @@ class AISubtitleProcessor:
 
             if item['sources']:
                 html += '            <div class="sources">\n'
-                html += '                <strong>🔗 相关链接：</strong><br>\n'
+                html += '                <strong> 相关链接：</strong><br>\n'
                 for link in item['sources']:
                     html += f'                • <a href="{link}" target="_blank">{link}</a><br>\n'
                 html += '            </div>\n'
@@ -736,7 +736,7 @@ class AISubtitleProcessor:
 
         html += f"""
         <div style="margin-top: 30px; padding: 20px; background-color: #f0f8ff; border-radius: 8px; text-align: center;">
-            <h3 style="margin-top: 0;">🎬 观看视频</h3>
+            <h3 style="margin-top: 0;"> 观看视频</h3>
             <p style="margin: 10px 0;">
                 <a href="https://www.bilibili.com/video/{overview['bvid']}"
                    style="display: inline-block; background-color: #00a1d6; color: white; padding: 10px 20px;

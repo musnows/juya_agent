@@ -37,13 +37,13 @@ openai_client = AsyncOpenAI(
 # 设置为 agents 库的默认客户端
 set_default_openai_client(openai_client, use_for_tracing=False)
 
-# 初始化日志器
-logger = get_logger("juya_agents")
+# 使用统一的日志器
+logger = get_logger()
 
 model = OpenAIChatCompletionsModel(
     model=llm_model,
     openai_client=openai_client)
-logger.info(f"✅ OpenAI 客户端已配置")
+logger.info("OpenAI client configured successfully")
 logger.info(f"   Base URL: {base_url}")
 logger.info(f"   API Key: {api_key[:6]}......{api_key[-4:]}" if api_key else "   API Key: 未设置")
 logger.info(f"   LLM Model: {llm_model}")
