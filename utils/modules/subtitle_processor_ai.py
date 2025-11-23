@@ -485,8 +485,7 @@ class AISubtitleProcessor:
         speech_texts = processed_data.get('speech_texts', [])
         if speech_texts:
             # 添加兜底逻辑说明
-            md_lines.append("> ⚠️ **重要说明**：因视频缺少简介，当前早报内容使用语音转写生成，内容因语音转写存在失真，请以原视频为准。\n")
-            md_lines.append("---\n")
+            md_lines.append("> ⚠️ **重要说明**：因B站视频缺少简介，当前早报内容使用语音转写生成，内容因语音转写可能存在失真，请以原视频内容为准。\n\n")
 
         # 元信息
         md_lines.append(f"**📅 发布日期：** {overview['publish_date']}")
