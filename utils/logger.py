@@ -51,9 +51,9 @@ def _setup_unified_logger(log_level: str) -> logging.Logger:
     today_str = datetime.now().strftime('%Y-%m-%d')
     log_file = log_dir / f"juya_{today_str}.log"
 
-    # Create concise formatter (single line, no emojis)
+    # Create formatter with file location info for debugging
     formatter = logging.Formatter(
-        fmt='%(asctime)s [%(levelname)s] %(message)s',
+        fmt='%(asctime)s [%(levelname)s] %(filename)s:%(lineno)d - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
 
