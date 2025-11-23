@@ -1321,3 +1321,8 @@ a {
     color: var(--accent-orange);
     text-decoration: underline;
 }
+
+/* hr元素样式 */
+hr {
+    margin-bottom: 1em;
+}
