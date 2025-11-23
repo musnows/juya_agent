@@ -22,6 +22,7 @@ from dotenv import load_dotenv
 from utils.modules.bilibili_api import BilibiliAPI, parse_cookie_string
 from utils.modules.subtitle_processor_ai import AISubtitleProcessor
 from utils.modules.email_sender import EmailSender
+from utils.video_fallback import VideoFallbackProcessor
 from utils.web_generator import WebGenerator
 from utils.logger import get_logger
 
@@ -58,6 +59,7 @@ class JuyaProcessor:
         self.api = self._get_bili_api()
         self.processor = AISubtitleProcessor()
         self.email_sender = EmailSender()
+        self.fallback_processor = VideoFallbackProcessor(PROJECT_ROOT)
     
     def _get_bili_api(self) -> BilibiliAPI:
         """获取B站API客户端"""
@@ -211,18 +213,34 @@ class JuyaProcessor:
                 self.logger.info(f"📄 文档已存在，跳过重新生成: {filepath}")
                 return True
 
+            # 检查是否应该跳过文件生成（简介短且无SDK配置）
+            if self.fallback_processor.should_skip_file_generation(video_info):
+                self.logger.info("🚫 跳过文件生成")
+                self.logger.info("   原因：视频简介长度小于30字符且腾讯云语音SDK未配置")
+                return False
+
             # 获取字幕
             self.logger.info("📥 获取字幕...")
             subtitle = self.api.get_subtitle(bvid)
 
-            if not subtitle:
-                self.logger.warning("⚠️ 视频没有字幕，将使用视频简介提取新闻...")
+            # 检查是否需要触发兜底逻辑
+            speech_texts = None
+            should_use_fallback = False
 
-            # 处理字幕/简介
+            if self.fallback_processor.should_trigger_fallback(video_info):
+                self.logger.info("🔄 触发视频兜底处理逻辑")
+                speech_texts = self.fallback_processor.process_video_fallback(bvid, video_info)
+                should_use_fallback = speech_texts is not None
+
+            if not subtitle and not should_use_fallback:
+                self.logger.warning("⚠️ 视频没有字幕，且未触发兜底逻辑，将使用视频简介提取新闻...")
+
+            # 处理字幕/简介/语音转文字
             self.logger.info("🤖 AI整理早报中...")
             processed_data = self.processor.process(
                 subtitle if subtitle else [],
-                video_info
+                video_info,
+                speech_texts if should_use_fallback else None
             )
 
             # 生成Markdown文档
@@ -499,14 +517,14 @@ def single_run(processor: JuyaProcessor, send_email: bool = False, generate_web:
     return True
 
 
-def bv_run(processor: JuyaProcessor, bvid: str, send_email: bool = False, generate_web: bool = False):
+def bv_run(processor: JuyaProcessor, bvid: str, send_email: bool = False, generate_web: bool = False, force: bool = False):
     """指定BV号运行模式"""
     logger.info("="*60)
     logger.info(f"🎯 指定BV号运行模式 - {bvid}")
     logger.info("="*60)
 
     # 处理视频
-    success = processor.process_video(bvid)
+    success = processor.process_video(bvid, force_regenerate=force)
     if not success:
         logger.error("❌ 处理视频失败")
         return False
@@ -733,7 +751,7 @@ def main():
         elif mode == 'single':
             single_run(processor, args.send_email, args.web)
         elif mode == 'bv':
-            bv_run(processor, args.bv, args.send_email, args.web)
+            bv_run(processor, args.bv, args.send_email, args.web, args.force)
         elif mode == 'loop':
             loop_run(processor, args.send_email, args.web)
         elif mode == 'history':

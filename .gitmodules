@@ -1,0 +1,3 @@
+[submodule "utils/tx-speech-sdk"]
+	path = utils/tx-speech-sdk
+	url = https://github.com/TencentCloud/tencentcloud-speech-sdk-python.git

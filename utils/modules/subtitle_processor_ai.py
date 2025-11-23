@@ -31,13 +31,14 @@ class AISubtitleProcessor:
             timeout=90.0
         )
 
-    def process(self, subtitle_data: List[Dict], video_info: Dict) -> Dict:
+    def process(self, subtitle_data: List[Dict], video_info: Dict, speech_texts: List[str] = None) -> Dict:
         """
         使用AI处理字幕数据，生成结构化的新闻报告
 
         Args:
             subtitle_data: 字幕列表，每项包含 from, to, content（可以为空，使用简介作为备用）
             video_info: 视频信息，包含 bvid, title, desc 等
+            speech_texts: 语音转文字结果（兜底方案，当视频简介为空时使用）
 
         Returns:
             处理后的结构化数据
@@ -52,8 +53,12 @@ class AISubtitleProcessor:
 
             # 2. 使用AI提炼新闻内容
             news_items = self._ai_extract_news(full_text, subtitle_data, desc_links)
+        elif speech_texts is not None:
+            # 兜底方案：使用语音转文字结果
+            self.logger.info("🔄 使用语音转文字结果提取新闻...")
+            news_items = self._extract_news_from_speech_text(speech_texts, desc_links)
         else:
-            # 没有字幕时，使用视频简介作为备用
+            # 没有字幕且没有兜底方案时，使用视频简介作为备用
             self.logger.warning("⚠️ 没有字幕，使用视频简介提取新闻...")
             news_items = self._extract_news_from_description(video_info.get('desc', ''), desc_links)
 
@@ -73,7 +78,8 @@ class AISubtitleProcessor:
         return {
             'overview': overview,
             'news_items': news_items,
-            'raw_subtitles': subtitle_data if subtitle_data else []
+            'raw_subtitles': subtitle_data if subtitle_data else [],
+            'speech_texts': speech_texts if speech_texts else []
         }
 
     def _merge_subtitles(self, subtitles: List[Dict]) -> str:
@@ -351,6 +357,107 @@ class AISubtitleProcessor:
             # 如果AI提取失败，返回空列表
             return []
 
+    def _extract_news_from_speech_text(self, speech_texts: List[str], desc_links: List[Dict]) -> List[Dict]:
+        """
+        从语音转文字结果中提取新闻（兜底方案，当视频简介为空时使用）
+
+        Args:
+            speech_texts: 语音识别结果文本列表
+            desc_links: 从简介中提取的链接列表（通常为空）
+
+        Returns:
+            新闻列表
+        """
+        if not speech_texts:
+            self.logger.warning("⚠️ 语音识别结果为空，无法提取新闻")
+            return []
+
+        # 合并所有声道的文本
+        full_text = ' '.join(speech_texts)
+
+        self.logger.info(f"📝 开始从语音转文字结果中提取新闻，文本长度: {len(full_text)} 字符")
+
+        prompt = f"""你是一个专业的AI资讯编辑。请从以下AI早报的语音转文字内容中，提炼出结构化的新闻条目。
+
+语音转文字内容：
+{full_text}
+
+重要说明：
+早报中部分内容因语音转写失真，你需要根据你自己的知识，将其修正为正确的计算机、大模型行业的专有名词
+
+要求：
+1. 识别并提取每一条独立的AI新闻
+2. 为每条新闻生成一个精炼的标题（10-25字，简洁明了）
+3. 写一段详细的新闻报道，尽可能详细地包含：
+   - 核心事件描述（什么公司/产品发布/更新了什么）
+   - 关键功能、特性、技术细节的详细说明
+   - 使用场景、应用价值或行业影响
+   - 修正语音转写中可能错误的技术术语和专有名词
+4. 提取相关的公司/产品/技术名称（2-3个主要实体）
+5. 保持专业客观的语气，提供充分信息量
+
+内容写作要求：
+- 详细展开每个要点，不要概括性描述
+- 将语音转文字中的技术细节完整保留并展开说明
+- 修正明显的语音转写错误（如"GPT"可能被转写为"GPTT"等）
+- 多用"功能包括"、"特点是"、"支持"等词汇来展开内容
+- 避免"此外"、"同时"等生硬连接词，改用自然衔接
+- 尽可能详细，但保持内容的可读性和专业性
+
+输出JSON格式：
+{{
+  "news": [
+    {{
+      "title": "新闻标题",
+      "content": "详细新闻内容（150-300字）",
+      "entities": ["公司/产品名"],
+      "category": "产品发布|技术更新|行业动态|其他"
+    }}
+  ]
+}}
+
+只返回JSON，不要其他解释。"""
+
+        try:
+            response = self.client.chat.completions.create(
+                model=LLM_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3
+            )
+
+            result_text = response.choices[0].message.content.strip()
+
+            # 提取JSON（去除可能的markdown代码块标记）
+            if result_text.startswith('```'):
+                result_text = result_text.split('```')[1]
+                if result_text.startswith('json'):
+                    result_text = result_text[4:]
+
+            import json
+            result = json.loads(result_text)
+
+            news_items = []
+            for idx, news in enumerate(result.get('news', [])):
+                # 尝试从描述链接中匹配相关链接（虽然通常为空）
+                source_links = self._match_links_for_news(news, desc_links)
+
+                news_items.append({
+                    'title': news.get('title', ''),
+                    'content': news.get('content', ''),
+                    'entities': news.get('entities', []),
+                    'category': news.get('category', '其他'),
+                    'sources': source_links,
+                    'index': idx + 1
+                })
+
+            self.logger.info(f"✅ 从语音转文字结果中提取到 {len(news_items)} 条新闻")
+            return news_items
+
+        except Exception as e:
+            self.logger.error(f"从语音转文字提取新闻失败: {e}")
+            # 如果AI提取失败，返回空列表
+            return []
+
     def format_markdown(self, processed_data: Dict) -> str:
         """
         将处理后的数据格式化为精美的 Markdown
@@ -369,9 +476,16 @@ class AISubtitleProcessor:
         # 标题
         md_lines.append(f"# {overview['video_title']}\n")
 
+        # 检查是否使用了兜底逻辑（语音转写）
+        speech_texts = processed_data.get('speech_texts', [])
+        if speech_texts:
+            # 添加兜底逻辑说明
+            md_lines.append("> ⚠️ **重要说明**：因视频缺少简介，当前早报内容使用语音转写生成，内容因语音转写存在失真，请以原视频为准。\n")
+            md_lines.append("---\n")
+
         # 元信息
         md_lines.append(f"**📅 发布日期：** {overview['publish_date']}")
-        md_lines.append(f"**🎬 BV号：** {overview['bvid']}")
+        md_lines.append(f"**🎬 BV号：** [{overview['bvid']}](https://www.bilibili.com/video/{overview['bvid']})")
         md_lines.append(f"**📝 整理时间：** {overview['processed_time']}")
         md_lines.append(f"**📊 资讯数量：** {overview['total_news']} 条\n")
         md_lines.append("---\n")
@@ -477,6 +591,17 @@ class AISubtitleProcessor:
             font-size: 0.9em;
             margin-bottom: 20px;
         }}
+        .warning {{
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            color: #856404;
+        }}
+        .warning strong {{
+            color: #856404;
+        }}
         .overview {{
             background-color: #f8f9fa;
             border-left: 4px solid #4CAF50;
@@ -544,7 +669,18 @@ class AISubtitleProcessor:
             🎬 BV号：{overview['bvid']} |
             📊 资讯数量：{overview['total_news']} 条
         </div>
+"""
 
+        # 检查是否使用了兜底逻辑（语音转写）
+        speech_texts = processed_data.get('speech_texts', [])
+        if speech_texts:
+            html += """
+        <div class="warning">
+            <strong>⚠️ 重要说明</strong>：因视频缺少简介，当前早报内容使用语音转写生成，内容因语音转写存在失真，请以原视频为准。
+        </div>
+"""
+
+        html += f"""
         <div class="overview">
             <strong>📋 本期概览</strong>
             <div style="margin-top: 10px;">

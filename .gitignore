@@ -2,6 +2,7 @@
 .venv
 venv
 *.log
+.ai-docs
 
 # config目录下的 cookies.json
 config/cookies.json
@@ -11,6 +12,6 @@ data/*
 
 # docs目录下的所有文件（但保留目录本身）
 docs/*
-dist/*
+dist/
 
 __pycache__

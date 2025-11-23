@@ -77,6 +77,17 @@ pip install openai openai-agents python-dotenv requests
 npm install -g schedule-task-mcp
 ```
 
+同时还需要配置submodule的腾讯云语音SDK（必须初始化）
+
+```sh
+git submodule init --update
+```
+
+如需要使用腾讯云兜底逻辑，则必须配置腾讯云SDK里面的appid、密钥等环境变量，同时需要安装两个第三方工具用于下载和处理视频
+
+- you-get: 用于下载B站视频，项目链接：<https://github.com/soimort/you-get>。可以使用`pip3 install you-get`或者`brew install you-get`安装。
+- ffmpeg: 将视频转为mp3，用于请求腾讯云语音SDK。可以使用`brew install ffmpeg`或`sudo apt install -y ffmpeg`安装。
+
 ### 2. 配置环境变量
 
 创建 `.env` 文件：
@@ -99,6 +110,11 @@ EMAIL_TO="receiver@example.com"
 SCHEDULE_TASK_TIMEZONE="Asia/Shanghai"
 SCHEDULE_TASK_DB_PATH="./data/schedule_tasks.db"
 SCHEDULE_TASK_SAMPLING_TIMEOUT="300000"
+
+# 腾讯云语言sdk
+TX_APPID=xxx
+TX_SECRET_ID=xxx
+TX_SECRET_KEY=xxx
 ```
 
 ### 3. 配置 B 站 Cookies
