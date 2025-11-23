@@ -218,7 +218,12 @@ function renderNewspaperDetail(newspaper) {
                 <div class="detail-meta-item">
                     <i class="fas fa-video"></i>
                     <strong>BV号：</strong>
-                    <span>${newspaper.bv_id || '未知BV号'}</span>
+                    <span>
+                        ${newspaper.bv_id ?
+                            `<a href="https://www.bilibili.com/video/${newspaper.bv_id}" target="_blank" class="bv-link">${newspaper.bv_id}</a>` :
+                            '未知BV号'
+                        }
+                    </span>
                 </div>
                 <div class="detail-meta-item">
                     <i class="fas fa-clock"></i>

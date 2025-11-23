@@ -81,6 +81,40 @@ class NewspaperService:
             overview_match = re.search(r'## 📋 本期概览\n\n(.+?)\n\n---', content, re.DOTALL)
             overview = overview_match.group(1).strip() if overview_match else ''
 
+            # 转换为HTML并移除第一个h1标题以避免二次渲染
+            html_content = markdown.markdown(
+                content,
+                extensions=[
+                    'extra',
+                    'codehilite',
+                    'tables',
+                    'toc',
+                    'fenced_code',
+                    'nl2br',
+                    'attr_list',
+                    'def_list',
+                    'footnotes',
+                    'admonition'
+                ],
+                extension_configs={
+                    'codehilite': {
+                        'css_class': 'highlight',
+                        'use_pygments': True
+                    }
+                }
+            )
+
+            # 移除第一个h1标签以避免在详情页面二次渲染标题
+            html_content = re.sub(r'<h1[^>]*>.*?</h1>', '', html_content, count=1, flags=re.DOTALL)
+
+            # 移除原有的元数据信息（发布日期、BV号、整理时间、资讯数量）和后面的分隔符
+            # 匹配从<strong>📅 发布日期：</strong>开始到<strong>📊 资讯数量：</strong> ... 条</p>以及后面的<hr />，同时清理多余的换行
+            metadata_pattern = r'<p><strong>📅 发布日期：</strong>.*?<strong>📊 资讯数量：</strong>\s*\d+\s*条</p>\s*<hr\s*/?>'
+            html_content = re.sub(metadata_pattern, '', html_content, flags=re.DOTALL)
+
+            # 清理开头的多余空白字符
+            html_content = html_content.lstrip()
+
             return {
                 'title': title,
                 'publish_date': publish_date,
@@ -89,27 +123,7 @@ class NewspaperService:
                 'news_count': news_count,
                 'overview': overview,
                 'content': content,
-                'html_content': markdown.markdown(
-                    content,
-                    extensions=[
-                        'extra',
-                        'codehilite',
-                        'tables',
-                        'toc',
-                        'fenced_code',
-                        'nl2br',
-                        'attr_list',
-                        'def_list',
-                        'footnotes',
-                        'admonition'
-                    ],
-                    extension_configs={
-                        'codehilite': {
-                            'css_class': 'highlight',
-                            'use_pygments': True
-                        }
-                    }
-                )
+                'html_content': html_content
             }
         except Exception as e:
             print(f"解析文件失败 {filepath}: {e}")
