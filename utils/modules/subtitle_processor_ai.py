@@ -484,10 +484,10 @@ class AISubtitleProcessor:
             md_lines.append("---\n")
 
         # 元信息
-        md_lines.append(f"** 发布日期：** {overview['publish_date']}")
-        md_lines.append(f"** BV号：** [{overview['bvid']}](https://www.bilibili.com/video/{overview['bvid']})")
-        md_lines.append(f"** 整理时间：** {overview['processed_time']}")
-        md_lines.append(f"** 资讯数量：** {overview['total_news']} 条\n")
+        md_lines.append(f"** 发布日期**： {overview['publish_date']}")
+        md_lines.append(f"** BV号**： [{overview['bvid']}](https://www.bilibili.com/video/{overview['bvid']})")
+        md_lines.append(f"** 整理时间**： {overview['processed_time']}")
+        md_lines.append(f"** 资讯数量**： {overview['total_news']} 条\n")
         md_lines.append("---\n")
 
         # 概览（同时作为目录）
@@ -517,14 +517,14 @@ class AISubtitleProcessor:
             # 标签
             if item['entities']:
                 tags = ' '.join([f"`{entity}`" for entity in item['entities']])
-                md_lines.append(f"**标签：** {tags}\n")
+                md_lines.append(f"**标签**： {tags}\n")
 
             # 详细内容
             md_lines.append(f"{item['content']}\n")
 
             # 来源链接
             if item['sources']:
-                md_lines.append("** 相关链接：**")
+                md_lines.append("**相关链接**：")
                 for link in item['sources']:
                     https_link = link.replace('http://','https://')
                     md_lines.append(f"- <{https_link}>")
