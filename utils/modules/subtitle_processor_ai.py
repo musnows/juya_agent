@@ -14,6 +14,7 @@ from ..logger import get_logger
 
 load_dotenv()
 LLM_MODEL = os.getenv("OPENAI_MODEL")
+MAX_TOKENS = int(os.getenv("OPENAI_MAX_TOKENS", "8192"))
 
 class AISubtitleProcessor:
     """AI驱动的字幕智能处理器"""
@@ -160,7 +161,8 @@ class AISubtitleProcessor:
             response = self.client.chat.completions.create(
                 model=LLM_MODEL,
                 messages=[{"role": "user", "content": prompt}],
-                temperature=0.3
+                temperature=0.3,
+                max_tokens=MAX_TOKENS
             )
 
             result_text = response.choices[0].message.content.strip()
@@ -258,7 +260,8 @@ class AISubtitleProcessor:
             response = self.client.chat.completions.create(
                 model=LLM_MODEL,
                 messages=[{"role": "user", "content": prompt}],
-                temperature=0.5
+                temperature=0.5,
+                max_tokens=MAX_TOKENS
             )
 
             return response.choices[0].message.content.strip()
@@ -321,7 +324,8 @@ class AISubtitleProcessor:
             response = self.client.chat.completions.create(
                 model=LLM_MODEL,
                 messages=[{"role": "user", "content": prompt}],
-                temperature=0.3
+                temperature=0.3,
+                max_tokens=MAX_TOKENS
             )
 
             result_text = response.choices[0].message.content.strip()
@@ -422,7 +426,8 @@ class AISubtitleProcessor:
             response = self.client.chat.completions.create(
                 model=LLM_MODEL,
                 messages=[{"role": "user", "content": prompt}],
-                temperature=0.3
+                temperature=0.3,
+                max_tokens=MAX_TOKENS
             )
 
             result_text = response.choices[0].message.content.strip()

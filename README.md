@@ -111,6 +111,7 @@ you-get 'https://www.bilibili.com/video/BV1ufkzBvEug/' --cookies config/cookies.
 OPENAI_API_KEY="your-api-key"
 OPENAI_BASE_URL="https://ai.devtool.tech/proxy/v1"
 OPENAI_MODEL=gpt-4o-mini
+OPENAI_MAX_TOKENS=8192 # 设置模型最大输出token，建议直接设置成模型可支持的输出token最大值，默认8192
 
 # 邮件配置
 EMAIL_FROM="your-email@163.com"

@@ -24,6 +24,7 @@ load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
 base_url = os.getenv("OPENAI_BASE_URL")
 llm_model = os.getenv("OPENAI_MODEL")
+max_tokens = int(os.getenv("OPENAI_MAX_TOKENS", "8192"))
 
 if not api_key:
     raise ValueError("OPENAI_API_KEY 环境变量未设置")
@@ -42,11 +43,13 @@ logger = get_logger()
 
 model = OpenAIChatCompletionsModel(
     model=llm_model,
-    openai_client=openai_client)
+    openai_client=openai_client,
+    max_tokens=max_tokens)
 logger.info("OpenAI client configured successfully")
 logger.info(f"   Base URL: {base_url}")
 logger.info(f"   API Key: {api_key[:6]}......{api_key[-4:]}" if api_key else "   API Key: 未设置")
 logger.info(f"   LLM Model: {llm_model}")
+logger.info(f"   Max Tokens: {max_tokens}")
 
 
 # ============= MCP Server 配置 =============
