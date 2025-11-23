@@ -139,9 +139,12 @@ class VideoFallbackProcessor:
             # 构建you-get命令
             cmd = [
                 'you-get',
+                '-o', str(target_dir),  # 输出目录
                 video_url,
-                '-o', str(target_dir)  # 输出目录
             ]
+            # 如果有b站cookie文件，加载
+            if os.path.exists('config/cookies.txt'):
+                cmd.extend(['--cookie', 'config/cookies.txt'])
 
             self.logger.info(f"Executing command: {' '.join(cmd)}")
 
