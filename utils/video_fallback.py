@@ -310,6 +310,53 @@ class VideoFallbackProcessor:
             self.logger.error(f"Speech recognition failed: {e}")
             return None
 
+    def save_voice_output(self, text_results: List[str], date_dir: str) -> bool:
+        """
+        保存语音转写结果到voice_output.txt文件
+
+        Args:
+            text_results: 语音转写结果文本列表
+            date_dir: 日期目录名 (YYYYMMDD)
+
+        Returns:
+            bool: 保存是否成功
+        """
+        if not text_results:
+            self.logger.warning("No speech recognition results to save")
+            return False
+
+        target_dir = self.video_dir / date_dir
+        voice_output_file = target_dir / "voice_output.txt"
+
+        try:
+            self.logger.info(f"Saving voice output to: {voice_output_file}")
+
+            # 准备保存的内容
+            content = []
+            content.append("=" * 60)
+            content.append("语音转写结果")
+            content.append("=" * 60)
+            content.append(f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            content.append(f"识别结果数量: {len(text_results)}")
+            content.append("")
+
+            for i, text in enumerate(text_results, 1):
+                content.append(f"频道 {i}:")
+                content.append("-" * 20)
+                content.append(text)
+                content.append("")
+
+            # 写入文件
+            with open(voice_output_file, 'w', encoding='utf-8') as f:
+                f.write('\n'.join(content))
+
+            self.logger.info(f"Voice output saved successfully: {voice_output_file}")
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Failed to save voice output: {e}")
+            return False
+
     def process_video_fallback(self, bvid: str, video_info: Dict, report_date: str = None) -> Optional[List[str]]:
         """
         执行完整的视频兜底处理流程
@@ -349,6 +396,10 @@ class VideoFallbackProcessor:
         if text_results is None:
             self.logger.error("Speech recognition failed, fallback process terminated")
             return None
+
+        # 5. 保存语音转写结果到文件
+        if text_results:
+            self.save_voice_output(text_results, date_str)
 
         self.logger.info("Video fallback processing workflow completed")
         return text_results
