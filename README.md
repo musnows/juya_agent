@@ -2,52 +2,6 @@
 
 橘鸦视频监控 Agent，自动检测 B 站新视频并生成 AI 早报。
 
-## 🎯 新功能：AI早报展示系统
-
-我们新增了一个现代化的Web界面来展示AI早报内容！
-
-### ✨ 特色功能
-- 🎨 **科技杂志风格**：深色主题配合霓虹蓝色调
-- 📱 **响应式设计**：完美适配桌面、平板和手机
-- 🔄 **分页浏览**：每页显示10条早报，支持翻页查看
-- 🔍 **详情查看**：点击早报卡片查看完整内容和相关链接
-- 📊 **实时统计**：显示早报总数和资讯条数
-- 🎬 **视频链接**：直接跳转到B站观看对应视频
-
-### 🚀 快速启动
-```bash
-# 一键启动AI早报服务（包含前后端）
-python run.py
-```
-
-访问 http://localhost:15000 即可查看精美的早报展示页面。
-
-### 📁 新增文件结构
-```
-├── frontend/           # Web前端界面
-│   ├── index.html     # 主页面
-│   ├── styles.css     # 现代化样式
-│   ├── script.js      # 交互逻辑
-│   └── README.md      # 前端详细文档
-├── backend/           # Python后端服务
-│   ├── app.py         # Flask应用（集成前后端）
-│   ├── requirements.txt # 依赖包
-│   └── start_server.py # 启动脚本
-└── run.py             # 一键启动脚本
-```
-
-### 🔧 API接口
-访问 http://localhost:15000/api 可用接口：
-- `GET /api/reports` - 获取所有早报
-- `GET /api/reports/<id>` - 获取特定早报详情
-- `GET /api/search?q=关键词` - 搜索早报
-- `GET /api/stats` - 获取统计信息
-- `GET /api/health` - 健康检查
-
-详细说明请查看 [frontend/README.md](frontend/README.md)
-
----
-
 ## 功能
 
 - 🎥 检查橘鸦 B 站账号的最新视频
@@ -56,12 +10,13 @@ python run.py
 - ⏰ 支持定时任务（通过自然语言创建，如"每天早上9点检查新视频"）
 - 💬 交互式对话界面
 - 🚀 命令行工具（单次运行、指定BV号、定时监控）
+- 📚 前后端展示（支持静态前端和动态前端，<https://ai.daliy.musnow.top>
 
 ## 技术栈
 
-- OpenAI Agents SDK
-- OpenAI API (gpt-4o-mini)
-- schedule-task-mcp（定时任务）
+- OpenAI Agents SDK（仅chat.py使用）
+- OpenAI API (可使用第三方服务商)
+- schedule-task-mcp（定时任务，仅chat.py使用）
 - Python 3.13+
 
 ## 快速开始
@@ -77,30 +32,11 @@ pip install openai openai-agents python-dotenv requests
 npm install -g schedule-task-mcp
 ```
 
-同时还需要配置submodule的腾讯云语音SDK（必须初始化）
+同时还需要初始化submodule的腾讯云语音SDK
 
 ```sh
 git submodule update --init
 ```
-
-如需要使用腾讯云兜底逻辑，则必须配置腾讯云SDK里面的appid、密钥等环境变量，同时需要安装两个第三方工具用于下载和处理视频
-
-- you-get: 用于下载B站视频，项目链接：<https://github.com/soimort/you-get>。可以使用`pip3 install you-get`或者`brew install you-get`安装。
-- ffmpeg: 将视频转为mp3，用于请求腾讯云语音SDK。可以使用`brew install ffmpeg`或`sudo apt install -y ffmpeg`安装。
-
-请先尝试使用you-get命令确认视频能够正常下载
-
-```sh
-you-get 'https://www.bilibili.com/video/BV1ufkzBvEug/'
-```
-
-若出现错误，请尝试使用chrome/edge的`Cookies txt`插件，导出B站的Cookies.txt文件，将该文件放入本项目的`config/cookies.txt`下，使用cookie重试
-
-```sh
-you-get 'https://www.bilibili.com/video/BV1ufkzBvEug/' --cookies config/cookies.txt
-```
-
-若使用cookies，还是无法下载视频，请在you-get仓库提交issue/pr咨询问题原因。
 
 ### 2. 配置环境变量
 
@@ -144,9 +80,44 @@ TX_SECRET_KEY=xxx
 }
 ```
 
-这里的三个字段都是B站Cookie的字段，打开B站后，F12进入开发者工具，点击`网络`选项窗，然后刷新页面，在data.bilibili.com的请求Cookie中，可以找到这三个字段，将对应字段的value拷贝到config中即可。
+这里的三个字段都是B站Cookie的字段，打开B站后，F12进入开发者工具，点击`网络`选项窗，然后刷新页面，在`data.bilibili.com`的请求Cookie中，可以找到这三个字段，将对应字段的value拷贝到config中即可。
 
-### 4. 运行
+### 4. 配置腾讯云语音SDK转写能力
+
+默认情况下，早报是依赖于视频字幕或视频简介（由于橘鸦视频基本没有字幕，大概率使用视频简介生成）AI生成，为进一步提高生成的早报简介内容的有效性，引入了腾讯云SDK对视频进行语音转文字，交付AI一并处理。
+
+当配置了腾讯云SDK转写能力时，早报处理分为三种情况：
+- 有字幕：只使用字幕生成早报
+- 无字幕，有简介：使用简介+语音转写生成早报
+- 无字幕，无简介：只使用语音转写生成早报
+
+如需要使用腾讯云语音转写逻辑，则必须配置腾讯云SDK里面的appid、密钥等环境变量，同时需要安装两个第三方工具用于下载和处理B站视频
+
+- you-get: 用于下载B站视频，项目链接：<https://github.com/soimort/you-get>。可以使用`pip3 install you-get`或者`brew install you-get`安装。
+- ffmpeg: 将视频mp4转为mp3，用于请求腾讯云语音SDK。可以使用`brew install ffmpeg`或`sudo apt install -y ffmpeg`安装。
+
+安装完毕you-get后，请先尝试在命令行使用you-get命令确认B站视频能够正常下载
+
+```sh
+you-get 'https://www.bilibili.com/video/BV1ufkzBvEug/'
+```
+
+若出现错误，请使用chrome/edge的`Cookies txt`插件，导出B站的Cookies.txt文件，将该文件放入本项目的`config/cookies.txt`下，使用cookie重试（项目运行时会自动检测是否有该文件并使用）
+
+```sh
+you-get 'https://www.bilibili.com/video/BV1ufkzBvEug/' --cookies config/cookies.txt
+```
+
+若使用cookies，还是无法下载视频，请在you-get仓库提交issue/pr咨询问题原因。
+
+视频下载成功后，请ffmpeg命令确认其能够正常转为mp3文件，且mp3文件能够播放，声音正常。
+```sh
+ffmpeg -i "下载的mp4视频文件路径" -codec:a libmp3lame -b:a 128k -y output.mp3
+```
+
+当视频无法正常下载、处理时，腾讯云语音SDK逻辑会失效，不影响原有简介生成逻辑。
+
+### 5. 运行
 
 #### 交互式对话模式（推荐）
 ```bash
@@ -174,6 +145,17 @@ uv run python main.py --single --send-email
 
 # 定时运行并发送邮件
 uv run python main.py --loop --send-email
+
+# 运行生成静态前端页面
+uv run python main.py --loop --web
+```
+
+#### 前端展示页面
+
+如下是使用前后端实现的展示页面能力，更推荐使用`main.py`的`--web`参数生成静态前端。
+
+```sh
+uv run web.py
 ```
 
 ## 使用示例
@@ -278,46 +260,8 @@ juya_agent/
 生成文档到 docs/ 目录
     ↓
 记录处理状态到 data/processed_videos.json
-```
-
-## 开发
-
-### 添加新工具
-
-在 `utils/tools.py` 中定义：
-
-```python
-@function_tool
-def your_tool(param: Annotated[str, "参数说明"]) -> YourResultModel:
-    """工具描述"""
-    return YourResultModel(...)
-```
-
-在 `utils/juya_agents.py` 中注册：
-
-```python
-orchestrator_agent = Agent(
-    name="juya_orchestrator",
-    model="gpt-4o-mini",
-    tools=[check_new_videos, process_video, send_email_report, your_tool]
-)
-```
-
-### 添加新的命令行功能
-
-1. 在 `main.py` 的 `JuyaProcessor` 类中添加新方法
-2. 在 `argparse` 配置中添加新的命令行参数
-3. 在 `main()` 函数中处理新的运行模式
-
-```python
-def your_new_mode(processor: JuyaProcessor, args):
-    """新的运行模式"""
-    print("🚀 新运行模式")
-    # 实现你的逻辑
-    pass
-
-# 在 main() 中添加
-parser.add_argument('--your-flag', help='你的新参数')
+    ↓
+如果指定了--web参数，生成静态前端到 dist/ 目录下
 ```
 
 ## License
