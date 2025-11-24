@@ -10,7 +10,7 @@
 - ⏰ 支持定时任务（通过自然语言创建，如"每天早上9点检查新视频"）
 - 💬 交互式对话界面
 - 🚀 命令行工具（单次运行、指定BV号、定时监控）
-- 📚 前后端展示（支持静态前端和动态前端，<https://ai.daliy.musnow.top>
+- 📚 前后端展示（支持静态前端和动态前端，<https://ai.daliy.musnow.top>）
 
 ## 技术栈
 
@@ -70,6 +70,8 @@ TX_SECRET_KEY=xxx
 
 ### 3. 配置 B 站 Cookies
 
+B站 Cookies 用于请求B站API获取视频信息（标题、简介、字幕等）
+
 创建 `config/cookies.json`：
 
 ```json
@@ -80,21 +82,22 @@ TX_SECRET_KEY=xxx
 }
 ```
 
-这里的三个字段都是B站Cookie的字段，打开B站后，F12进入开发者工具，点击`网络`选项窗，然后刷新页面，在`data.bilibili.com`的请求Cookie中，可以找到这三个字段，将对应字段的value拷贝到config中即可。
+这里的三个字段都是B站Cookie的Key，打开B站后，F12进入开发者工具，点击`网络`选项窗，然后刷新页面，在`data.bilibili.com`的请求Cookie中，可以找到这三个字段，将对应字段的value拷贝到config中即可。
 
 ### 4. 配置腾讯云语音SDK转写能力
 
-默认情况下，早报是依赖于视频字幕或视频简介（由于橘鸦视频基本没有字幕，大概率使用视频简介生成）AI生成，为进一步提高生成的早报简介内容的有效性，引入了腾讯云SDK对视频进行语音转文字，交付AI一并处理。
+默认情况下，早报是依赖于视频字幕或视频简介（橘鸦的视频基本没有B站生成的AI字幕，大概率使用视频简介生成），交付AI总结生成。为进一步提高生成的早报内容的有效性，引入了腾讯云SDK对视频进行语音转文字，交付AI一并处理。
 
 当配置了腾讯云SDK转写能力时，早报处理分为三种情况：
-- 有字幕：只使用字幕生成早报
-- 无字幕，有简介：使用简介+语音转写生成早报
-- 无字幕，无简介：只使用语音转写生成早报
+1. 有字幕：只使用字幕生成早报
+2. 无字幕，有简介：使用简介+语音转写生成早报
+3. 无字幕，无简介：只使用语音转写生成早报
+4. 无字幕，无简介，未配置腾讯云SDK：无法生成，跳过处理
 
-如需要使用腾讯云语音转写逻辑，则必须配置腾讯云SDK里面的appid、密钥等环境变量，同时需要安装两个第三方工具用于下载和处理B站视频
+如需要使用腾讯云语音转写逻辑，则必须在环境变量中配置腾讯云SDK里面的appid、密钥id、密钥key（在腾讯云控制台获取），同时需要安装两个第三方命令行工具用于下载和处理B站视频
 
 - you-get: 用于下载B站视频，项目链接：<https://github.com/soimort/you-get>。可以使用`pip3 install you-get`或者`brew install you-get`安装。
-- ffmpeg: 将视频mp4转为mp3，用于请求腾讯云语音SDK。可以使用`brew install ffmpeg`或`sudo apt install -y ffmpeg`安装。
+- ffmpeg: 将视频mp4转为mp3，以mp3请求腾讯云语音SDK。可以使用`brew install ffmpeg`或`sudo apt install -y ffmpeg`安装。
 
 安装完毕you-get后，请先尝试在命令行使用you-get命令确认B站视频能够正常下载
 
@@ -102,7 +105,7 @@ TX_SECRET_KEY=xxx
 you-get 'https://www.bilibili.com/video/BV1ufkzBvEug/'
 ```
 
-若出现错误，请使用chrome/edge的`Cookies txt`插件，导出B站的Cookies.txt文件，将该文件放入本项目的`config/cookies.txt`下，使用cookie重试（项目运行时会自动检测是否有该文件并使用）
+若出现错误，请使用chrome/edge的[Cookies txt](https://microsoftedge.microsoft.com/addons/detail/dilbcaaegopfblcjdjikanigjbcbngbk)插件，导出B站的Cookies.txt文件，将该文件放入本项目的`config/cookies.txt`下，使用cookie重试（项目运行时会自动检测是否有该文件并使用）
 
 ```sh
 you-get 'https://www.bilibili.com/video/BV1ufkzBvEug/' --cookies config/cookies.txt
@@ -110,12 +113,14 @@ you-get 'https://www.bilibili.com/video/BV1ufkzBvEug/' --cookies config/cookies.
 
 若使用cookies，还是无法下载视频，请在you-get仓库提交issue/pr咨询问题原因。
 
-视频下载成功后，请ffmpeg命令确认其能够正常转为mp3文件，且mp3文件能够播放，声音正常。
+----
+
+视频下载成功后，请使用ffmpeg命令确认其能够正常转为mp3文件，且mp3文件能够播放，声音正常。
 ```sh
 ffmpeg -i "下载的mp4视频文件路径" -codec:a libmp3lame -b:a 128k -y output.mp3
 ```
 
-当视频无法正常下载、处理时，腾讯云语音SDK逻辑会失效，不影响原有简介生成逻辑。
+**当视频无法正常下载、处理时，腾讯云语音SDK逻辑会失效，但不影响原有依赖于视频简介生成早报的逻辑**。
 
 ### 5. 运行
 
