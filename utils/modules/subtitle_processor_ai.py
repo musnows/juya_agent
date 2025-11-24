@@ -5,6 +5,7 @@ AI驱动的字幕处理模块
 
 import os
 import re
+import json
 from datetime import datetime
 from typing import List, Dict, Optional
 from openai import OpenAI
@@ -37,31 +38,46 @@ class AISubtitleProcessor:
         使用AI处理字幕数据，生成结构化的新闻报告
 
         Args:
-            subtitle_data: 字幕列表，每项包含 from, to, content（可以为空，使用简介作为备用）
+            subtitle_data: 字幕列表，每项包含 from, to, content
             video_info: 视频信息，包含 bvid, title, desc 等
-            speech_texts: 语音转文字结果（兜底方案，当视频简介为空时使用）
+            speech_texts: 语音转文字结果（当没有字幕时必须提供）
 
         Returns:
             处理后的结构化数据
         """
         # 提取视频描述中的链接
         desc_links = self._extract_links_from_desc(video_info.get('desc', ''))
+        video_desc = video_info.get('desc', '').strip()
 
-        # 如果有字幕，使用字幕提取新闻
-        if subtitle_data:
+        # 明确四种处理场景：
+        # 场景1: 有字幕 - 直接使用字幕生成早报
+        if subtitle_data and len(subtitle_data) > 0:
+            self.logger.info("Using subtitles to extract news...")
             # 1. 合并字幕文本
             full_text = self._merge_subtitles(subtitle_data)
-
             # 2. 使用AI提炼新闻内容
             news_items = self._ai_extract_news(full_text, subtitle_data, desc_links)
-        elif speech_texts is not None:
-            # 兜底方案：使用语音转文字结果
-            self.logger.info("Using speech-to-text results to extract news...")
-            news_items = self._extract_news_from_speech_text(speech_texts, desc_links)
+
+        # 场景2、3、4: 没有字幕
         else:
-            # 没有字幕且没有兜底方案时，使用视频简介作为备用
-            self.logger.warning("No subtitles available, using video description to extract news...")
-            news_items = self._extract_news_from_description(video_info.get('desc', ''), desc_links)
+            # 场景2: 有简介且有语音转文字 - 优先结合生成（质量最高）
+            if video_desc and len(video_desc) >= 30 and speech_texts:
+                self.logger.info("Combining video description with speech-to-text for enhanced news extraction...")
+                news_items = self._extract_news_from_description_and_speech(video_desc, speech_texts, desc_links)
+
+            # 场景3: 有简介但无语音转文字 - 仅使用简介（无需语音转写能力）
+            elif video_desc and len(video_desc) >= 30:
+                self.logger.info("No subtitles available, using video description to extract news...")
+                news_items = self._extract_news_from_description(video_desc, desc_links)
+
+            # 场景4: 简介太短但有语音转文字 - 仅使用语音转文字
+            elif speech_texts:
+                self.logger.info("Video description too short or empty, using speech-to-text to extract news...")
+                news_items = self._extract_news_from_speech_text(speech_texts, desc_links)
+
+            # 场景5: 无简介且无语音转文字 - 无法处理
+            else:
+                raise ValueError("没有字幕时必须有简介或语音转文字结果之一")
 
         # 3. 生成概览
         overview_text = self._ai_generate_overview(news_items, video_info)
@@ -86,6 +102,27 @@ class AISubtitleProcessor:
     def _merge_subtitles(self, subtitles: List[Dict]) -> str:
         """合并字幕为完整文本"""
         return ' '.join([s['content'] for s in subtitles])
+
+    def _extract_json_from_response(self, result_text: str) -> dict:
+        """
+        从API响应中提取JSON数据
+
+        Args:
+            result_text: API返回的文本内容
+
+        Returns:
+            解析后的JSON对象
+
+        Raises:
+            json.JSONDecodeError: JSON解析失败时抛出
+        """
+        # 提取JSON（去除可能的markdown代码块标记）
+        if result_text.startswith('```'):
+            result_text = result_text.split('```')[1]
+            if result_text.startswith('json'):
+                result_text = result_text[4:]
+
+        return json.loads(result_text)
 
     def _extract_links_from_desc(self, desc: str) -> List[Dict[str, any]]:
         """从视频描述中提取链接（带标题和时间戳）"""
@@ -166,15 +203,7 @@ class AISubtitleProcessor:
             )
 
             result_text = response.choices[0].message.content.strip()
-
-            # 提取JSON（去除可能的markdown代码块标记）
-            if result_text.startswith('```'):
-                result_text = result_text.split('```')[1]
-                if result_text.startswith('json'):
-                    result_text = result_text[4:]
-
-            import json
-            result = json.loads(result_text)
+            result = self._extract_json_from_response(result_text)
 
             news_items = []
             for idx, news in enumerate(result.get('news', [])):
@@ -270,6 +299,113 @@ class AISubtitleProcessor:
             self.logger.error(f"AI生成概览失败: {e}")
             return f"本期AI早报共包含 {len(news_items)} 条资讯，涵盖AI领域的最新动态。"
 
+    def _extract_news_from_description_and_speech(self, description: str, speech_texts: List[str], desc_links: List[Dict]) -> List[Dict]:
+        """
+        结合视频简介和语音转文字结果提取新闻（场景2：有简介+语音转文字）
+
+        Args:
+            description: 视频简介文本
+            speech_texts: 语音转文字结果列表
+            desc_links: 从简介中提取的链接列表
+
+        Returns:
+            新闻列表
+        """
+        if not speech_texts:
+            self.logger.warning("Speech recognition result is empty, cannot extract news")
+            return []
+
+        # 合并所有声道的文本
+        full_speech_text = ' '.join(speech_texts)
+
+        self.logger.info(f"Combining description and speech-to-text for news extraction, desc length: {len(description)}, speech length: {len(full_speech_text)}")
+
+        prompt = f"""你是一个专业的AI资讯编辑。请结合以下视频简介和语音转文字内容，提炼出结构化的新闻条目。
+
+视频简介：
+{description}
+
+语音转文字内容：
+{full_speech_text}
+
+重要说明：
+1. 视频简介通常提供了新闻的核心要点和结构，但可能不够详细
+2. 语音转文字包含了详细的讲解内容，但可能存在专有名词转写错误
+3. 请结合两者的优势：用简介确定新闻结构和要点，用语音转文字补充详细信息
+
+处理策略：
+1. 优先从视频简介中识别新闻条目的结构和标题
+2. 从语音转文字中提取详细的技术细节、功能描述和具体数据
+3. 修正语音转文字中可能错误的技术术语和专有名词
+4. 补充简介中可能缺失的重要细节
+
+要求：
+1. 识别并提取每一条独立的AI新闻
+2. 为每条新闻生成一个精炼的标题（10-25字，简洁明了）
+3. 写一段详细的新闻报道，尽可能详细地包含：
+   - 核心事件描述（什么公司/产品发布/更新了什么）
+   - 关键功能、特性、技术细节的详细说明
+   - 使用场景、应用价值或行业影响
+   - 保留语音转文字中的所有具体数据、版本号、时间点
+4. 提取相关的公司/产品/技术名称（2-3个主要实体）
+5. 保持专业客观的语气，提供充分信息量
+
+内容写作要求：
+- 详细展开每个要点，不要概括性描述
+- 将语音转文字中的技术细节完整保留并展开说明
+- 修正明显的语音转写错误（实体名称、专有名词等）
+- 多用"功能包括"、"特点是"、"支持"等词汇来展开内容
+- 避免生硬连接词，改用自然衔接
+- 尽可能详细，但保持内容的可读性和专业性
+
+输出JSON格式：
+{{
+  "news": [
+    {{
+      "title": "新闻标题",
+      "content": "详细新闻内容（150-300字）",
+      "entities": ["公司/产品名"],
+      "category": "产品发布|技术更新|行业动态|其他"
+    }}
+  ]
+}}
+
+只返回JSON，不要其他解释。"""
+
+        try:
+            response = self.client.chat.completions.create(
+                model=LLM_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3,
+                max_tokens=MAX_TOKENS
+            )
+
+            result_text = response.choices[0].message.content.strip()
+            result = self._extract_json_from_response(result_text)
+
+            news_items = []
+            for idx, news in enumerate(result.get('news', [])):
+                # 尝试从描述链接中匹配相关链接
+                source_links = self._match_links_for_news(news, desc_links)
+
+                news_items.append({
+                    'title': news.get('title', ''),
+                    'content': news.get('content', ''),
+                    'entities': news.get('entities', []),
+                    'category': news.get('category', '其他'),
+                    'sources': source_links,
+                    'index': idx + 1
+                })
+
+            self.logger.info(f"Extracted {len(news_items)} news items from combined description and speech-to-text")
+            return news_items
+
+        except Exception as e:
+            self.logger.error(f"Failed to extract news from combined description and speech-to-text: {e}")
+            # 如果结合处理失败，降级为仅使用语音转文字
+            self.logger.info("Falling back to speech-to-text only...")
+            return self._extract_news_from_speech_text(speech_texts, desc_links)
+
     def _extract_news_from_description(self, description: str, desc_links: List[Dict]) -> List[Dict]:
         """
         从视频简介中提取新闻（备用方案，当没有字幕时使用）
@@ -281,7 +417,7 @@ class AISubtitleProcessor:
         Returns:
             新闻列表
         """
-        if not description or len(description.strip()) < 50:
+        if not description or len(description.strip()) < 30:
             self.logger.warning("Video description too short to extract news")
             return []
 
@@ -329,15 +465,7 @@ class AISubtitleProcessor:
             )
 
             result_text = response.choices[0].message.content.strip()
-
-            # 提取JSON
-            if result_text.startswith('```'):
-                result_text = result_text.split('```')[1]
-                if result_text.startswith('json'):
-                    result_text = result_text[4:]
-
-            import json
-            result = json.loads(result_text)
+            result = self._extract_json_from_response(result_text)
 
             news_items = []
             for idx, news in enumerate(result.get('news', [])):
@@ -431,15 +559,7 @@ class AISubtitleProcessor:
             )
 
             result_text = response.choices[0].message.content.strip()
-
-            # 提取JSON（去除可能的markdown代码块标记）
-            if result_text.startswith('```'):
-                result_text = result_text.split('```')[1]
-                if result_text.startswith('json'):
-                    result_text = result_text[4:]
-
-            import json
-            result = json.loads(result_text)
+            result = self._extract_json_from_response(result_text)
 
             news_items = []
             for idx, news in enumerate(result.get('news', [])):

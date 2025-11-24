@@ -64,23 +64,34 @@ class VideoFallbackProcessor:
 
         return configured
 
-    def should_skip_file_generation(self, video_info: Dict) -> bool:
+    def should_skip_file_generation(self, video_info: Dict, has_subtitle: bool = False, has_speech_text: bool = False) -> bool:
         """
-        判断是否应该跳过文件生成（简介短且无SDK配置）
+        判断是否应该跳过文件生成
 
         Args:
             video_info: 视频信息字典
+            has_subtitle: 是否有字幕
+            has_speech_text: 是否有语音转文字结果
 
         Returns:
             bool: 是否应该跳过文件生成
         """
         desc = video_info.get('desc', '').strip()
 
-        # 检查简介长度
+        # 如果有字幕，不需要跳过文件生成
+        if has_subtitle:
+            self.logger.debug("Video has subtitles, proceeding with file generation")
+            return False
+
+        # 如果有语音转文字结果，不需要跳过文件生成
+        if has_speech_text:
+            self.logger.debug("Speech-to-text result available, proceeding with file generation")
+            return False
+
+        # 没有字幕、没有语音转文字、简介又太短且无SDK配置时，跳过文件生成
         if len(desc) < 30:
             self.logger.info(f"Video description length: {len(desc)} characters, below 30 character threshold")
 
-            # 检查腾讯云语音SDK是否已配置
             if not self._is_tx_speech_configured():
                 self.logger.warning("Tencent Cloud Speech SDK not configured, skipping file generation")
                 self.logger.info("   Please set environment variables: TX_APPID, TX_SECRET_ID, TX_SECRET_KEY")
@@ -88,32 +99,30 @@ class VideoFallbackProcessor:
 
         return False
 
-    def should_trigger_fallback(self, video_info: Dict) -> bool:
+    def should_trigger_fallback(self, video_info: Dict, has_subtitle: bool = False) -> bool:
         """
         判断是否应该触发兜底逻辑
 
         Args:
             video_info: 视频信息字典
+            has_subtitle: 是否有字幕
 
         Returns:
             bool: 是否应该触发兜底逻辑
         """
-        desc = video_info.get('desc', '').strip()
+        # 如果有字幕，不需要触发兜底逻辑
+        if has_subtitle:
+            self.logger.debug("Video has subtitles, no need to trigger fallback logic")
+            return False
 
-        # 检查简介长度
-        if len(desc) < 30:
-            self.logger.info(f"Video description length: {len(desc)} characters, below 30 character threshold")
+        # 没有字幕时，只要腾讯云SDK可用就需要生成语音转写
+        if not self._is_tx_speech_configured():
+            self.logger.warning("Tencent Cloud Speech SDK not configured, skipping fallback logic")
+            self.logger.info("   Please set environment variables: TX_APPID, TX_SECRET_ID, TX_SECRET_KEY")
+            return False
 
-            # 检查腾讯云语音SDK是否已配置
-            if not self._is_tx_speech_configured():
-                self.logger.warning("Tencent Cloud Speech SDK not configured, skipping fallback logic")
-                self.logger.info("   Please set environment variables: TX_APPID, TX_SECRET_ID, TX_SECRET_KEY")
-                return False
-
-            self.logger.info("Triggering video fallback processing logic")
-            return True
-
-        return False
+        self.logger.info("No subtitles available and Tencent Cloud Speech SDK is configured, triggering video fallback processing")
+        return True
 
     def download_video(self, bvid: str, date_dir: str) -> Optional[str]:
         """

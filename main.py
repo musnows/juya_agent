@@ -211,10 +211,7 @@ class JuyaProcessor:
                 self.logger.info(f"Document already exists, skipping regeneration: {filepath}")
                 return True
 
-            # 检查是否应该跳过文件生成（简介短且无SDK配置）
-            if self.fallback_processor.should_skip_file_generation(video_info):
-                self.logger.info("Skipping file generation: video description too short and Tencent Cloud SDK not configured")
-                return False
+            # 这部分逻辑现在移到后面，因为需要先检查字幕情况
 
             # 获取字幕
             self.logger.info("Fetching subtitles...")
@@ -223,14 +220,18 @@ class JuyaProcessor:
             # 检查是否需要触发兜底逻辑
             speech_texts = None
             should_use_fallback = False
+            has_subtitle = bool(subtitle)
 
-            if self.fallback_processor.should_trigger_fallback(video_info):
-                self.logger.info("Triggering video fallback processing logic")
+            # 新的兜底逻辑：无字幕时只要腾讯云SDK可用，都需要生成语音转写
+            if self.fallback_processor.should_trigger_fallback(video_info, has_subtitle):
+                self.logger.info("No subtitles available, triggering video fallback processing for speech-to-text")
                 speech_texts = self.fallback_processor.process_video_fallback(bvid, video_info, date_str_yyyymmdd)
                 should_use_fallback = speech_texts is not None
 
-            if not subtitle and not should_use_fallback:
-                self.logger.warning("Video has no subtitles and fallback not triggered, using video description to extract news...")
+            # 检查是否应该跳过文件生成（视频字幕、简介、语音转写均不可用）
+            if self.fallback_processor.should_skip_file_generation(video_info, has_subtitle, bool(should_use_fallback)):
+                self.logger.warning("Skipping file generation: insufficient content and no speech SDK available")
+                return False
 
             # 处理字幕/简介/语音转文字
             self.logger.info("Processing AI report generation...")
