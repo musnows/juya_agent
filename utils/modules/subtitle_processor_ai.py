@@ -96,7 +96,8 @@ class AISubtitleProcessor:
             'overview': overview,
             'news_items': news_items,
             'raw_subtitles': subtitle_data if subtitle_data else [],
-            'speech_texts': speech_texts if speech_texts else []
+            'speech_texts': speech_texts if speech_texts else [],
+            'video_info': video_info
         }
 
     def _merge_subtitles(self, subtitles: List[Dict]) -> str:
@@ -601,9 +602,14 @@ class AISubtitleProcessor:
         # 标题
         md_lines.append(f"# {overview['video_title']}\n")
 
-        # 检查是否使用了兜底逻辑（语音转写）
+        # 检查是否完全依赖语音转写生成早报（无字幕+无简介）
+        raw_subtitles = processed_data.get('raw_subtitles', [])
         speech_texts = processed_data.get('speech_texts', [])
-        if speech_texts:
+        video_info = processed_data.get('video_info', {})
+        video_desc = video_info.get('desc', '') if video_info else ''
+
+        # 只有在完全依赖语音转写时才添加警告（无字幕+无简介+有语音转写）
+        if (not raw_subtitles and not video_desc and speech_texts):
             # 添加兜底逻辑说明
             md_lines.append("> ⚠️ **重要说明**：因B站视频缺少简介，当前早报内容使用语音转写生成，内容因语音转写可能存在失真，请以原视频内容为准。\n\n")
 
@@ -795,9 +801,14 @@ class AISubtitleProcessor:
         </div>
 """
 
-        # 检查是否使用了兜底逻辑（语音转写）
+        # 检查是否完全依赖语音转写生成早报（无字幕+无简介）
+        raw_subtitles = processed_data.get('raw_subtitles', [])
         speech_texts = processed_data.get('speech_texts', [])
-        if speech_texts:
+        video_info = processed_data.get('video_info', {})
+        video_desc = video_info.get('desc', '') if video_info else ''
+
+        # 只有在完全依赖语音转写时才添加警告（无字幕+无简介+有语音转写）
+        if (not raw_subtitles and not video_desc and speech_texts):
             html += """
         <div class="warning">
             <strong>⚠️ 重要说明</strong>：因视频缺少简介，当前早报内容使用语音转写生成，内容因语音转写存在失真，请以原视频为准。
