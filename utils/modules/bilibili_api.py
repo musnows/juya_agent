@@ -8,7 +8,6 @@ from hashlib import md5
 import urllib.parse
 import time
 import requests
-import json
 from typing import Dict, List, Optional
 
 
@@ -171,20 +170,121 @@ class BilibiliAPI:
 
         return sub_content['body']
 
+    def get_video_comments(self, bvid: str, page_num: int = 1, page_size: int = 20, 
+                           sort: int = 0, no_hot: bool = False) -> Dict:
+        """
+        获取视频评论列表
 
-def parse_cookie_string(cookie_str: str) -> Dict[str, str]:
-    """
-    解析 cookie 字符串为字典
+        Args:
+            bvid: 视频的 BV 号
+            page_num: 页码，默认为1
+            page_size: 每页评论数，默认为20，最大20
+            sort: 排序方式，0:按时间(默认)，1:按点赞数，2:按回复数
+            no_hot: 是否不显示热评，默认False(显示热评)
 
-    Args:
-        cookie_str: cookie 字符串，格式如 "key1=value1; key2=value2"
+        Returns:
+            评论数据字典，包含评论列表、页信息、热评等
+        """
+        # 先获取视频信息得到 aid (oid)
+        video_info = self.get_video_info(bvid)
+        oid = video_info['aid']  # 使用 aid 作为 oid
+        
+        # 构建请求参数
+        params = {
+            'type': 1,  # 视频评论类型
+            'oid': oid,
+            'sort': sort,
+            'ps': min(page_size, 20),  # 限制最大20
+            'pn': page_num,
+            'nohot': 1 if no_hot else 0
+        }
+        
+        url = 'https://api.bilibili.com/x/v2/reply'
+        response = requests.get(url, params=params, cookies=self.cookies, headers=self.headers)
+        data = response.json()
+        
+        if data.get('code') == 0:
+            return data['data']
+        else:
+            error_msg = data.get('message', '未知错误')
+            raise Exception(f"获取评论失败: {error_msg}")
 
-    Returns:
-        cookie 字典
-    """
-    cookies = {}
-    for item in cookie_str.split('; '):
-        if '=' in item:
-            key, value = item.split('=', 1)
-            cookies[key] = value
-    return cookies
+    def get_top_comment(self, bvid: str) -> Optional[Dict]:
+        """
+        获取视频置顶评论基本信息
+
+        Args:
+            bvid: 视频的 BV 号
+
+        Returns:
+            置顶评论信息字典，如果没有置顶评论返回 None
+            包含字段:
+            - rpid: 评论ID
+            - author: 作者名
+            - content: 评论内容
+            - likes: 点赞数
+            - ctime: 发布时间戳
+            - formatted_time: 格式化时间字符串
+            - is_owner: 是否为UP主
+        """
+        try:
+            # 获取评论数据（使用合适的参数获取置顶评论）
+            comments_data = self.get_video_comments(bvid, page_num=1, page_size=50)
+            
+            if not comments_data:
+                return None
+            
+            # 获取置顶评论信息
+            upper = comments_data.get('upper')
+            if not upper or not upper.get('top'):
+                return None
+            
+            top_comment = upper['top']
+            member = top_comment.get('member', {})
+            
+            # 提取基本信息
+            result = {
+                'rpid': top_comment.get('rpid'),
+                'author': member.get('uname', '匿名用户'),
+                'content': top_comment.get('content', {}).get('message', ''),
+                'likes': top_comment.get('like', 0),
+                'ctime': top_comment.get('ctime', 0),
+                'is_owner': top_comment.get('attr', 0) == 2,  # attr=2 表示UP主置顶
+                'author_info': {
+                    'mid': member.get('mid'),
+                    'avatar': member.get('avatar'),
+                    'level': member.get('level_info', {}).get('current_level', 0),
+                    'vip_status': member.get('vip', {}).get('status', 0)
+                }
+            }
+            
+            # 格式化时间
+            if result['ctime']:
+                result['formatted_time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(result['ctime']))
+            else:
+                result['formatted_time'] = ''
+            
+            return result
+            
+        except Exception as e:
+            # 如果获取失败，记录错误但不抛出异常
+            print(f"获取置顶评论失败: {e}")
+            return None
+
+    @staticmethod
+    def parse_cookie_string(cookie_str: str) -> Dict[str, str]:
+        """
+        解析 cookie 字符串为字典
+
+        Args:
+            cookie_str: cookie 字符串，格式如 "key1=value1; key2=value2"
+
+        Returns:
+            cookie 字典
+        """
+        cookies = {}
+        for item in cookie_str.split('; '):
+            if '=' in item:
+                key, value = item.split('=', 1)
+                cookies[key] = value
+        return cookies
