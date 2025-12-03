@@ -48,6 +48,7 @@ class AISubtitleProcessor:
         # 提取视频描述中的链接
         desc_links = self._extract_links_from_desc(video_info.get('desc', ''))
         video_desc = video_info.get('desc', '').strip()
+        video_title = video_info.get('title', '')
 
         # 明确四种处理场景：
         # 场景1: 有字幕 - 直接使用字幕生成早报
@@ -56,31 +57,31 @@ class AISubtitleProcessor:
             # 1. 合并字幕文本
             full_text = self._merge_subtitles(subtitle_data)
             # 2. 使用AI提炼新闻内容
-            news_items = self._ai_extract_news(full_text, subtitle_data, desc_links)
+            news_items = self._ai_extract_news(full_text, subtitle_data, desc_links, video_title)
 
         # 场景2、3、4: 没有字幕
         else:
             # 场景2: 有简介且有语音转文字 - 优先结合生成（质量最高）
             if video_desc and len(video_desc) >= 30 and speech_texts:
                 self.logger.info("Combining video description with speech-to-text for enhanced news extraction...")
-                news_items = self._extract_news_from_description_and_speech(video_desc, speech_texts, desc_links)
+                news_items = self._extract_news_from_description_and_speech(video_desc, speech_texts, desc_links, video_title)
 
             # 场景3: 有简介但无语音转文字 - 仅使用简介（无需语音转写能力）
             elif video_desc and len(video_desc) >= 30:
                 self.logger.info("No subtitles available, using video description to extract news...")
-                news_items = self._extract_news_from_description(video_desc, desc_links)
+                news_items = self._extract_news_from_description(video_desc, desc_links, video_title)
 
             # 场景4: 简介太短但有语音转文字 - 仅使用语音转文字
             elif speech_texts:
                 self.logger.info("Video description too short or empty, using speech-to-text to extract news...")
-                news_items = self._extract_news_from_speech_text(speech_texts, desc_links)
+                news_items = self._extract_news_from_speech_text(speech_texts, desc_links, video_title)
 
             # 场景5: 无简介且无语音转文字 - 无法处理
             else:
                 raise ValueError("没有字幕时必须有简介或语音转文字结果之一")
 
         # 3. 生成概览
-        overview_text = self._ai_generate_overview(news_items, video_info)
+        overview_text = self._ai_generate_overview(news_items, video_info, video_title)
 
         # 4. 构建最终结构
         overview = {
@@ -155,24 +156,28 @@ class AISubtitleProcessor:
 
         return links_with_context
 
-    def _ai_extract_news(self, full_text: str, subtitles: List[Dict], desc_links: List[Dict]) -> List[Dict]:
+    def _ai_extract_news(self, full_text: str, subtitles: List[Dict], desc_links: List[Dict], video_title: str = "") -> List[Dict]:
         """使用AI提炼新闻条目"""
 
         prompt = f"""你是一个专业的AI资讯编辑。请从以下AI早报的字幕文本中，提炼出结构化的新闻条目。
+
+视频标题：{video_title}
 
 字幕文本：
 {full_text}
 
 要求：
-1. 识别并提取每一条独立的AI新闻
-2. 为每条新闻生成一个精炼的标题（10-25字，简洁明了）
-3. 写一段详细的新闻报道，尽可能详细地包含：
+1. 视频标题通常指向本期最重要的新闻，注意识别标题对应的新闻内容
+2. 识别并提取每一条独立的AI新闻
+3. 为每条新闻生成一个精炼的标题（10-25字，简洁明了）
+4. 写一段详细的新闻报道，尽可能详细地包含：
    - 核心事件描述（什么公司/产品发布/更新了什么）
    - 关键功能、特性、技术细节的详细说明
    - 使用场景、应用价值或行业影响
    - 保留字幕中提到的所有具体数据、版本号、时间点、技术术语
-4. 提取相关的公司/产品/技术名称（2-3个主要实体）
-5. 保持专业客观的语气，提供充分信息量
+5. 提取相关的公司/产品/技术名称（2-3个主要实体）
+6. 保持专业客观的语气，提供充分信息量
+7. 重点关注视频标题所指向的新闻，适当增加其内容的详细程度
 
 内容写作要求：
 - 详细展开每个要点，不要概括性描述
@@ -265,7 +270,7 @@ class AISubtitleProcessor:
         return matched_links[:3]  # 最多3个链接
 
 
-    def _ai_generate_overview(self, news_items: List[Dict], video_info: Dict) -> str:
+    def _ai_generate_overview(self, news_items: List[Dict], video_info: Dict, video_title: str = "") -> str:
         """使用AI生成本期概览"""
 
         # 构建新闻列表
@@ -278,11 +283,13 @@ class AISubtitleProcessor:
 {news_list}
 
 要求：
-1. 用2-3句话概括本期核心内容
-2. 突出最重要的1-2条新闻的关键词
-3. 简洁、信息密度高，不要冗余修饰
-4. 避免使用"本期"、"今天"、"此外"、"同时"等词
-5. 直接陈述事实，不要评论性语言
+1. 识别视频标题指向的重点新闻，突出其重要性
+2. 用2-3句话概括本期核心内容
+3. 重点突出视频标题所指向新闻的关键词和核心信息
+4. 简洁、信息密度高，不要冗余修饰
+5. 避免使用"本期"、"今天"、"此外"、"同时"等词
+6. 直接陈述事实，不要评论性语言
+7. 确保概览重点突出与视频标题相关的重要内容
 
 只返回概览文本，不要其他内容。"""
 
@@ -300,7 +307,7 @@ class AISubtitleProcessor:
             self.logger.error(f"AI生成概览失败: {e}")
             return f"本期AI早报共包含 {len(news_items)} 条资讯，涵盖AI领域的最新动态。"
 
-    def _extract_news_from_description_and_speech(self, description: str, speech_texts: List[str], desc_links: List[Dict]) -> List[Dict]:
+    def _extract_news_from_description_and_speech(self, description: str, speech_texts: List[str], desc_links: List[Dict], video_title: str = "") -> List[Dict]:
         """
         结合视频简介和语音转文字结果提取新闻（场景2：有简介+语音转文字）
 
@@ -308,6 +315,7 @@ class AISubtitleProcessor:
             description: 视频简介文本
             speech_texts: 语音转文字结果列表
             desc_links: 从简介中提取的链接列表
+            video_title: 视频标题
 
         Returns:
             新闻列表
@@ -321,7 +329,9 @@ class AISubtitleProcessor:
 
         self.logger.info(f"Combining description and speech-to-text for news extraction, desc length: {len(description)}, speech length: {len(full_speech_text)}")
 
-        prompt = f"""你是一个专业的AI资讯编辑。请结合以下视频简介和语音转文字内容，提炼出结构化的新闻条目。
+        prompt = f"""你是一个专业的AI资讯编辑。请结合以下视频标题、视频简介和语音转文字内容，提炼出结构化的新闻条目。
+
+视频标题：{video_title}
 
 视频简介：
 {description}
@@ -330,15 +340,18 @@ class AISubtitleProcessor:
 {full_speech_text}
 
 重要说明：
-1. 视频简介通常提供了新闻的核心要点和结构，但可能不够详细
-2. 语音转文字包含了详细的讲解内容，但可能存在专有名词转写错误
-3. 请结合两者的优势：用简介确定新闻结构和要点，用语音转文字补充详细信息
+1. 视频标题通常指向本期最重要的新闻，需要注意识别对应的新闻内容
+2. 视频简介通常提供了新闻的核心要点和结构，但可能不够详细
+3. 语音转文字包含了详细的讲解内容，但可能存在专有名词转写错误
+4. 请结合三者的优势：用标题识别重点新闻，用简介确定新闻结构和要点，用语音转文字补充详细信息
 
 处理策略：
-1. 优先从视频简介中识别新闻条目的结构和标题
-2. 从语音转文字中提取详细的技术细节、功能描述和具体数据
-3. 修正语音转文字中可能错误的技术术语和专有名词
-4. 补充简介中可能缺失的重要细节
+1. 识别视频标题指向的重点新闻内容
+2. 优先从视频简介中识别新闻条目的结构和标题
+3. 从语音转文字中提取详细的技术细节、功能描述和具体数据
+4. 修正语音转文字中可能错误的技术术语和专有名词
+5. 补充简介中可能缺失的重要细节
+6. 重点关注视频标题所指向的新闻，适当增加其内容详细程度
 
 要求：
 1. 识别并提取每一条独立的AI新闻
@@ -350,6 +363,7 @@ class AISubtitleProcessor:
    - 保留语音转文字中的所有具体数据、版本号、时间点
 4. 提取相关的公司/产品/技术名称（2-3个主要实体）
 5. 保持专业客观的语气，提供充分信息量
+6. 重点关注视频标题所指向的新闻，适当增加其内容的详细程度
 
 内容写作要求：
 - 详细展开每个要点，不要概括性描述
@@ -405,15 +419,16 @@ class AISubtitleProcessor:
             self.logger.error(f"Failed to extract news from combined description and speech-to-text: {e}")
             # 如果结合处理失败，降级为仅使用语音转文字
             self.logger.info("Falling back to speech-to-text only...")
-            return self._extract_news_from_speech_text(speech_texts, desc_links)
+            return self._extract_news_from_speech_text(speech_texts, desc_links, video_title)
 
-    def _extract_news_from_description(self, description: str, desc_links: List[Dict]) -> List[Dict]:
+    def _extract_news_from_description(self, description: str, desc_links: List[Dict], video_title: str = "") -> List[Dict]:
         """
         从视频简介中提取新闻（备用方案，当没有字幕时使用）
 
         Args:
             description: 视频简介文本
             desc_links: 从简介中提取的链接列表
+            video_title: 视频标题
 
         Returns:
             新闻列表
@@ -422,21 +437,25 @@ class AISubtitleProcessor:
             self.logger.warning("Video description too short to extract news")
             return []
 
-        prompt = f"""你是一个专业的AI资讯编辑。请从以下视频简介中，提炼出结构化的新闻条目。
+        prompt = f"""你是一个专业的AI资讯编辑。请结合视频标题和视频简介，提炼出结构化的新闻条目。
+
+视频标题：{video_title}
 
 视频简介：
 {description}
 
 要求：
-1. 识别并提取每一条独立的AI新闻（简介中通常会列出多条新闻）
-2. 为每条新闻生成一个精炼的标题（10-25字，简洁明了）
-3. 写一段详细的新闻报道，尽可能详细地包含：
+1. 视频标题通常指向本期最重要的新闻，注意在简介中识别对应的新闻内容
+2. 识别并提取每一条独立的AI新闻（简介中通常会列出多条新闻）
+3. 为每条新闻生成一个精炼的标题（10-25字，简洁明了）
+4. 写一段详细的新闻报道，尽可能详细地包含：
    - 核心事件描述（什么公司/产品发布/更新了什么）
    - 从简介中能推断出的关键功能、特性
    - 可能的应用价值或影响
    - 保留简介中的具体数据、版本号、时间点、技术术语
-4. 提取相关的公司/产品/技术名称（2-3个主要实体）
-5. 保持专业客观的语气
+5. 提取相关的公司/产品/技术名称（2-3个主要实体）
+6. 保持专业客观的语气
+7. 重点关注视频标题所指向的新闻，适当增加其内容的详细程度
 
 注意：
 - 简介通常会用"⬛️"或数字标注每条新闻
@@ -490,13 +509,14 @@ class AISubtitleProcessor:
             # 如果AI提取失败，返回空列表
             return []
 
-    def _extract_news_from_speech_text(self, speech_texts: List[str], desc_links: List[Dict]) -> List[Dict]:
+    def _extract_news_from_speech_text(self, speech_texts: List[str], desc_links: List[Dict], video_title: str = "") -> List[Dict]:
         """
         从语音转文字结果中提取新闻（兜底方案，当视频简介为空时使用）
 
         Args:
             speech_texts: 语音识别结果文本列表
             desc_links: 从简介中提取的链接列表（通常为空）
+            video_title: 视频标题
 
         Returns:
             新闻列表
@@ -510,13 +530,16 @@ class AISubtitleProcessor:
 
         self.logger.info(f"Starting news extraction from speech-to-text, text length: {len(full_text)} characters")
 
-        prompt = f"""你是一个专业的AI资讯编辑。请从以下AI早报的语音转文字内容中，提炼出结构化的新闻条目。
+        prompt = f"""你是一个专业的AI资讯编辑。请结合视频标题和语音转文字内容，提炼出结构化的新闻条目。
+
+视频标题：{video_title}
 
 语音转文字内容：
 {full_text}
 
 重要说明：
-早报中部分内容因语音转写失真，你需要根据你自己的知识，将其修正为正确的计算机、大模型行业的专有名词
+1. 视频标题通常指向本期最重要的新闻，需要注意识别对应的新闻内容
+2. 语音转文字内容因语音转写可能存在失真，需要根据专业知识修正为正确的计算机、大模型行业专有名词
 
 要求：
 1. 识别并提取每一条独立的AI新闻
@@ -528,6 +551,7 @@ class AISubtitleProcessor:
    - 修正语音转写中可能错误的技术术语和专有名词
 4. 提取相关的公司/产品/技术名称（2-3个主要实体）
 5. 保持专业客观的语气，提供充分信息量
+6. 重点关注视频标题所指向的新闻，适当增加其内容的详细程度
 
 内容写作要求：
 - 详细展开每个要点，不要概括性描述
