@@ -93,6 +93,9 @@ class WebGenerator:
             count_match = re.search(r'\*\*📊 资讯数量：\*\* (\d+)', content)
             news_count = int(count_match.group(1)) if count_match else 0
 
+            # 检查是否为语音转写生成
+            is_voice_generated = '语音转写生成' in content
+
             # 提取概览
             overview_match = re.search(r'## 📋 本期概览\n\n(.+?)\n\n---', content, re.DOTALL)
             overview = overview_match.group(1).strip() if overview_match else ''
@@ -139,7 +142,8 @@ class WebGenerator:
                 'news_count': news_count,
                 'overview': overview,
                 'content': content,
-                'html_content': html_content
+                'html_content': html_content,
+                'is_voice_generated': is_voice_generated
             }
         except Exception as e:
             self.logger.error(f"解析文件失败 {filepath}: {e}")
@@ -184,6 +188,9 @@ class WebGenerator:
         for newspaper in first_page:
             escape_html = lambda text: str(text).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&#x27;')
 
+            # 检查是否为语音转写生成并添加标识
+            voice_badge = '<i class="fas fa-microphone voice-badge"></i>' if newspaper.get('is_voice_generated', False) else ''
+
             cards_html += f"""
         <div class="newspaper-card" onclick="window.location.href='detail/{newspaper['publish_date']}.html'">
             <div class="newspaper-header">
@@ -196,6 +203,7 @@ class WebGenerator:
                     <div class="meta-item">
                         <i class="fas fa-video"></i>
                         <span>{newspaper['bv_id'] or '未知BV号'}</span>
+                        {voice_badge}
                     </div>
                 </div>
             </div>
@@ -288,6 +296,15 @@ class WebGenerator:
     }
 
     /* 注意：CSS变量已在主CSS文件中定义，此处不再重复 */
+
+    /* 语音标识样式 */
+    .voice-badge {
+        color: inherit;
+        font-size: 0.9em;
+        margin-left: 6px;
+        vertical-align: middle;
+        opacity: 0.8;
+    }
     </style>
 </head>
 <body>
@@ -423,7 +440,11 @@ class WebGenerator:
                 const data = await response.json();
                 const newspapersList = document.getElementById('newspapers-list');
 
-                const newCardsHtml = data.newspapers.map(newspaper => `
+                const newCardsHtml = data.newspapers.map(newspaper => {
+                    // 检查是否为语音转写生成并添加标识
+                    const voiceBadge = newspaper.is_voice_generated ? '<i class="fas fa-microphone voice-badge"></i>' : '';
+
+                    return `
                     <div class="newspaper-card" onclick="window.location.href='detail/${newspaper.publish_date}.html'">
                         <div class="newspaper-header">
                             <h3 class="newspaper-title">${escapeHtml(newspaper.title || '未知标题')}</h3>
@@ -435,6 +456,7 @@ class WebGenerator:
                                 <div class="meta-item">
                                     <i class="fas fa-video"></i>
                                     <span>${newspaper.bv_id || '未知BV号'}</span>
+                                    ${voiceBadge}
                                 </div>
                             </div>
                         </div>
@@ -451,7 +473,8 @@ class WebGenerator:
                             </div>
                         </div>
                     </div>
-                `).join('');
+                `;
+                }).join('');
 
                 newspapersList.insertAdjacentHTML('beforeend', newCardsHtml);
 
@@ -678,7 +701,8 @@ class WebGenerator:
                     'bv_id': newspaper.get('bv_id', ''),
                     'organize_time': newspaper.get('organize_time', ''),
                     'news_count': newspaper.get('news_count', 0),
-                    'overview': newspaper.get('overview', '')
+                    'overview': newspaper.get('overview', ''),
+                    'is_voice_generated': newspaper.get('is_voice_generated', False)
                 }
                 page_data['newspapers'].append(simplified_data)
 
