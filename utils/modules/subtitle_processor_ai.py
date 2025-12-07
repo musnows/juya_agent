@@ -8,10 +8,12 @@ import re
 import json
 from datetime import datetime
 from typing import List, Dict, Optional
+from pathlib import Path
 from openai import OpenAI
 from dotenv import load_dotenv
 
 from ..logger import get_logger
+from .bilibili_api import BilibiliAPI
 
 load_dotenv()
 LLM_MODEL = os.getenv("OPENAI_MODEL")
@@ -20,7 +22,7 @@ MAX_TOKENS = int(os.getenv("OPENAI_MAX_TOKENS", "8192"))
 class AISubtitleProcessor:
     """AI驱动的字幕智能处理器"""
 
-    def __init__(self):
+    def __init__(self, video_dir: Optional[Path] = None):
         # 使用统一的日志器
         self.logger = get_logger()
 
@@ -32,6 +34,12 @@ class AISubtitleProcessor:
             base_url=base_url,
             timeout=90.0
         )
+
+        # 初始化 Bilibili API
+        self.bilibili_api = BilibiliAPI({})
+
+        # 设置视频数据保存目录
+        self.video_dir = video_dir
 
     def process(self, subtitle_data: List[Dict], video_info: Dict, speech_texts: List[str] = None) -> Dict:
         """
@@ -50,7 +58,10 @@ class AISubtitleProcessor:
         video_desc = video_info.get('desc', '').strip()
         video_title = video_info.get('title', '')
 
-        # 明确四种处理场景：
+        # 生成日期目录（用于保存评论数据）
+        date_dir = datetime.fromtimestamp(video_info.get('pubdate', 0)).strftime('%Y%m%d')
+
+        # 明确五种处理场景：
         # 场景1: 有字幕 - 直接使用字幕生成早报
         if subtitle_data and len(subtitle_data) > 0:
             self.logger.info("Using subtitles to extract news...")
@@ -59,7 +70,7 @@ class AISubtitleProcessor:
             # 2. 使用AI提炼新闻内容
             news_items = self._ai_extract_news(full_text, subtitle_data, desc_links, video_title)
 
-        # 场景2、3、4: 没有字幕
+        # 场景2、3、4、5: 没有字幕
         else:
             # 场景2: 有简介且有语音转文字 - 优先结合生成（质量最高）
             if video_desc and len(video_desc) >= 30 and speech_texts:
@@ -71,14 +82,15 @@ class AISubtitleProcessor:
                 self.logger.info("No subtitles available, using video description to extract news...")
                 news_items = self._extract_news_from_description(video_desc, desc_links, video_title)
 
-            # 场景4: 简介太短但有语音转文字 - 仅使用语音转文字
+            # 场景4: 简介太短但有语音转文字 - 尝试获取评论并结合语音转文字
             elif speech_texts:
-                self.logger.info("Video description too short or empty, using speech-to-text to extract news...")
-                news_items = self._extract_news_from_speech_text(speech_texts, desc_links, video_title)
+                self.logger.info("Video description too short or empty, attempting to fetch comments and combine with speech-to-text...")
+                news_items = self._extract_news_from_speech_and_comments(speech_texts, desc_links, video_title, video_info, date_dir)
 
-            # 场景5: 无简介且无语音转文字 - 无法处理
+            # 场景5: 无简介且无语音转文字 - 尝试仅使用评论（如果有）
             else:
-                raise ValueError("没有字幕时必须有简介或语音转文字结果之一")
+                self.logger.info("No subtitles, description, or speech-to-text available, attempting to extract news from comments only...")
+                news_items = self._extract_news_from_comments_only(desc_links, video_title, video_info, date_dir)
 
         # 3. 生成概览
         overview_text = self._ai_generate_overview(news_items, video_info, video_title)
@@ -915,3 +927,387 @@ class AISubtitleProcessor:
 """
 
         return html
+
+    def save_comments_output(self, comments: List[Dict], date_dir: str) -> bool:
+        """
+        保存评论数据到comments_output.txt文件
+
+        Args:
+            comments: 评论数据列表
+            date_dir: 日期目录名 (YYYYMMDD)
+
+        Returns:
+            bool: 保存是否成功
+        """
+        if not comments:
+            self.logger.warning("No comments to save")
+            return False
+
+        if not self.video_dir:
+            self.logger.warning("video_dir not configured, cannot save comments")
+            return False
+
+        target_dir = self.video_dir / date_dir
+        comments_output_file = target_dir / "comments_output.txt"
+
+        try:
+            # 确保目录存在
+            target_dir.mkdir(parents=True, exist_ok=True)
+
+            self.logger.info(f"Saving comments output to: {comments_output_file}")
+
+            # 准备保存的内容
+            content = []
+            content.append("=" * 60)
+            content.append("视频评论数据")
+            content.append("=" * 60)
+            content.append(f"生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            content.append(f"评论数量: {len(comments)}")
+            content.append("")
+
+            for i, comment in enumerate(comments, 1):
+                content.append(f"评论 {i}:")
+                content.append("-" * 20)
+                content.append(f"作者: {comment.get('author', 'Unknown')}")
+                content.append(f"内容: {comment.get('content', '')}")
+                if 'like' in comment:
+                    content.append(f"点赞数: {comment['like']}")
+                content.append("")
+
+            # 写入文件
+            with open(comments_output_file, 'w', encoding='utf-8') as f:
+                f.write('\n'.join(content))
+
+            self.logger.info(f"Comments output saved successfully: {comments_output_file}")
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Failed to save comments output: {e}")
+            return False
+
+    def _get_uploader_comments(self, video_info: Dict, date_dir: str = None) -> List[Dict]:
+        """
+        获取UP主相关的评论，专门寻找包含时间戳格式的评论
+
+        Args:
+            video_info: 视频信息字典
+            date_dir: 日期目录名 (YYYYMMDD)，用于保存评论数据
+
+        Returns:
+            包含时间戳的评论内容列表
+        """
+        try:
+            bvid = video_info.get('bvid', '')
+            if not bvid:
+                self.logger.warning("No BV ID found in video info, cannot fetch comments")
+                return []
+
+            # 获取所有UP主相关的评论
+            comments = self.bilibili_api.get_all_uploader_related_comments(bvid)
+
+            if not comments:
+                self.logger.info("No uploader-related comments found")
+                return []
+
+            # 筛选包含时间戳格式的评论
+            timestamp_comments = []
+            for comment in comments:
+                content = comment.get('content', '')
+                if self._contains_timestamp_format(content):
+                    timestamp_comments.append(comment)
+                    self.logger.info(f"Found timestamp comment from {comment['author']}")
+
+            if timestamp_comments:
+                self.logger.info(f"Successfully found {len(timestamp_comments)} comments with timestamp format")
+
+                # 保存评论数据到文件（如果提供了date_dir参数）
+                if date_dir and self.video_dir:
+                    self.save_comments_output(timestamp_comments, date_dir)
+
+                return timestamp_comments
+            else:
+                self.logger.info("No comments with timestamp format found, skipping comment processing")
+                return []
+
+        except Exception as e:
+            self.logger.error(f"Failed to fetch uploader comments: {e}")
+            return []
+
+    def _contains_timestamp_format(self, content: str) -> bool:
+        """
+        检查评论内容是否包含时间戳格式（如 "Intro: 00:00", "Outro: 05:53"）
+
+        Args:
+            content: 评论内容
+
+        Returns:
+            是否包含时间戳格式
+        """
+        import re
+
+        # 检查是否包含 "Intro: XX:XX" 格式
+        intro_pattern = r'Intro:\s*\d{1,2}:\d{2}'
+        if re.search(intro_pattern, content, re.IGNORECASE):
+            return True
+
+        # 检查是否包含 "Outro: XX:XX" 格式
+        outro_pattern = r'Outro:\s*\d{1,2}:\d{2}'
+        if re.search(outro_pattern, content, re.IGNORECASE):
+            return True
+
+        # 检查是否包含其他时间戳格式（如 "公司名: XX:XX"）
+        timestamp_pattern = r':\s*\d{1,2}:\d{2}'
+        lines = content.split('\n')
+        timestamp_lines = 0
+
+        for line in lines:
+            line = line.strip()
+            # 如果一行包含时间戳格式，计数
+            if re.search(timestamp_pattern, line):
+                timestamp_lines += 1
+
+        # 如果有多行包含时间戳格式，可能是早报内容
+        return timestamp_lines >= 3
+
+    def _extract_news_from_speech_and_comments(self, speech_texts: List[str], desc_links: List[Dict], video_title: str = "", video_info: Dict = None, date_dir: str = None) -> List[Dict]:
+        """
+        结合语音转文字和UP主评论提取新闻（场景4：简介太短但有语音转文字）
+
+        Args:
+            speech_texts: 语音转文字结果列表
+            desc_links: 从简介中提取的链接列表（通常为空）
+            video_title: 视频标题
+            video_info: 视频信息字典
+            date_dir: 日期目录名 (YYYYMMDD)，用于保存评论数据
+
+        Returns:
+            新闻列表
+        """
+        if not speech_texts:
+            self.logger.warning("Speech recognition result is empty, cannot extract news")
+            return []
+
+        # 获取UP主评论
+        comments = self._get_uploader_comments(video_info, date_dir) if video_info else []
+
+        # 合并所有声道的文本
+        full_speech_text = ' '.join(speech_texts)
+
+        # 合并评论内容
+        comments_text = ''
+        if comments:
+            comments_list = []
+            for comment in comments:
+                if comment.get('content'):
+                    comments_list.append(comment.get('content', ''))
+            comments_text = ' '.join(comments_list)
+
+        self.logger.info(f"Extracting news from speech and comments, speech length: {len(full_speech_text)}, comments length: {len(comments_text)}")
+
+        prompt = f"""你是一个专业的AI资讯编辑。请结合视频标题、语音转文字内容和UP主评论，提炼出结构化的新闻条目。
+
+视频标题：{video_title}
+
+语音转文字内容：
+{full_speech_text}
+
+UP主评论内容：
+{comments_text if comments_text else "无UP主评论"}
+
+重要说明：
+1. 视频标题通常指向本期最重要的新闻，需要注意识别对应的新闻内容
+2. 语音转文字内容因语音转写可能存在失真，需要根据专业知识修正
+3. UP主评论通常包含重要的补充信息、修正说明或详细的时间戳内容
+4. 特别注意评论中的时间戳信息（如"Intro: 00:00"、"Google 上线...: 00:10"等），这些往往是新闻条目的准确时间点
+5. 如果评论中有时间戳格式的内容，这是最有价值的新闻结构信息
+
+处理策略：
+1. 优先从UP主评论中识别新闻条目结构（特别是时间戳格式）
+2. 用评论内容来修正和补充语音转文字中的信息
+3. 识别视频标题指向的重点新闻内容
+4. 从语音转文字中提取详细的技术细节、功能描述和具体数据
+5. 修正语音转文字中可能错误的技术术语和专有名词
+
+要求：
+1. 识别并提取每一条独立的AI新闻
+2. 为每条新闻生成一个精炼的标题（10-25字，简洁明了）
+3. 写一段详细的新闻报道，尽可能详细地包含：
+   - 核心事件描述（什么公司/产品发布/更新了什么）
+   - 关键功能、特性、技术细节的详细说明
+   - 使用场景、应用价值或行业影响
+   - 保留语音转文字和评论中的所有具体数据、版本号、时间点
+4. 提取相关的公司/产品/技术名称（2-3个主要实体）
+5. 保持专业客观的语气，提供充分信息量
+6. 重点关注视频标题所指向的新闻，适当增加其内容详细程度
+
+内容写作要求：
+- 详细展开每个要点，不要概括性描述
+- 将语音转文字和评论中的技术细节完整保留并展开说明
+- 修正明显的语音转写错误（实体名称、专有名词等）
+- 多用"功能包括"、"特点是"、"支持"等词汇来展开内容
+- 避免生硬连接词，改用自然衔接
+- 尽可能详细，但保持内容的可读性和专业性
+
+输出JSON格式：
+{{
+  "news": [
+    {{
+      "title": "新闻标题",
+      "content": "详细新闻内容（150-300字）",
+      "entities": ["公司/产品名"],
+      "category": "产品发布|技术更新|行业动态|其他"
+    }}
+  ]
+}}
+
+只返回JSON，不要其他解释。"""
+
+        try:
+            response = self.client.chat.completions.create(
+                model=LLM_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3,
+                max_tokens=MAX_TOKENS
+            )
+
+            result_text = response.choices[0].message.content.strip()
+            result = self._extract_json_from_response(result_text)
+
+            news_items = []
+            for idx, news in enumerate(result.get('news', [])):
+                # 尝试从描述链接中匹配相关链接
+                source_links = self._match_links_for_news(news, desc_links)
+
+                news_items.append({
+                    'title': news.get('title', ''),
+                    'content': news.get('content', ''),
+                    'entities': news.get('entities', []),
+                    'category': news.get('category', '其他'),
+                    'sources': source_links,
+                    'index': idx + 1
+                })
+
+            self.logger.info(f"Extracted {len(news_items)} news items from speech and comments")
+            return news_items
+
+        except Exception as e:
+            self.logger.error(f"Failed to extract news from speech and comments: {e}")
+            # 如果结合处理失败，降级为仅使用语音转文字
+            self.logger.info("Falling back to speech-to-text only...")
+            return self._extract_news_from_speech_text(speech_texts, desc_links, video_title)
+
+    def _extract_news_from_comments_only(self, desc_links: List[Dict], video_title: str = "", video_info: Dict = None, date_dir: str = None) -> List[Dict]:
+        """
+        仅从UP主评论中提取新闻（场景5：无简介且无语音转文字）
+
+        Args:
+            desc_links: 从简介中提取的链接列表（通常为空）
+            video_title: 视频标题
+            video_info: 视频信息字典
+            date_dir: 日期目录名 (YYYYMMDD)，用于保存评论数据
+
+        Returns:
+            新闻列表
+        """
+        # 获取UP主评论
+        comments = self._get_uploader_comments(video_info, date_dir) if video_info else []
+
+        if not comments:
+            self.logger.warning("No uploader comments available, cannot extract news")
+            return []
+
+        # 合并评论内容
+        comments_text = ''
+        comments_list = []
+        for comment in comments:
+            if comment.get('content'):
+                comments_list.append(comment.get('content', ''))
+        comments_text = ' '.join(comments_list)
+
+        self.logger.info(f"Extracting news from comments only, total comments: {len(comments)}, text length: {len(comments_text)}")
+
+        prompt = f"""你是一个专业的AI资讯编辑。请结合视频标题和UP主评论，提炼出结构化的新闻条目。
+
+视频标题：{video_title}
+
+UP主评论内容：
+{comments_text}
+
+重要说明：
+1. 视频标题通常指向本期最重要的新闻，需要注意识别对应的新闻内容
+2. UP主评论是唯一的信息来源，需要充分利用评论中的信息
+3. 特别注意评论中的时间戳信息（如"Intro: 00:00"、"Google 上线...: 00:10"等），这些往往是新闻条目的准确结构
+4. 评论中的时间戳格式内容是最有价值的新闻结构信息
+5. 可能需要根据有限的评论信息进行合理的内容扩展
+
+处理策略：
+1. 优先从评论中识别新闻条目结构（特别是时间戳格式）
+2. 识别视频标题指向的重点新闻内容
+3. 根据评论中的信息推断新闻的详细内容
+4. 如果评论信息有限，需要基于专业背景进行合理的内容补充
+5. 保持评论中已有的具体数据和事实
+
+要求：
+1. 识别并提取每一条独立的AI新闻
+2. 为每条新闻生成一个精炼的标题（10-25字，简洁明了）
+3. 写一段详细的新闻报道，尽可能详细地包含：
+   - 基于评论信息推断的核心事件描述
+   - 从评论中能提取或合理推断的功能、特性说明
+   - 可能的应用价值或行业影响
+   - 保留评论中的所有具体数据、版本号、时间点
+4. 提取相关的公司/产品/技术名称（2-3个主要实体）
+5. 保持专业客观的语气
+6. 重点关注视频标题所指向的新闻
+
+注意事项：
+- 如果评论信息较为简短，需要基于AI领域知识进行合理的内容扩展
+- 不要编造与评论信息明显矛盾的内容
+- 详细展开每个要点，提供充分的信息量
+- 保持内容的可读性和专业性
+
+输出JSON格式：
+{{
+  "news": [
+    {{
+      "title": "新闻标题",
+      "content": "详细新闻内容（150-300字）",
+      "entities": ["公司/产品名"],
+      "category": "产品发布|技术更新|行业动态|其他"
+    }}
+  ]
+}}
+
+只返回JSON，不要其他解释。"""
+
+        try:
+            response = self.client.chat.completions.create(
+                model=LLM_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.4,  # 稍微提高创造性来补充信息
+                max_tokens=MAX_TOKENS
+            )
+
+            result_text = response.choices[0].message.content.strip()
+            result = self._extract_json_from_response(result_text)
+
+            news_items = []
+            for idx, news in enumerate(result.get('news', [])):
+                # 尝试从描述链接中匹配相关链接
+                source_links = self._match_links_for_news(news, desc_links)
+
+                news_items.append({
+                    'title': news.get('title', ''),
+                    'content': news.get('content', ''),
+                    'entities': news.get('entities', []),
+                    'category': news.get('category', '其他'),
+                    'sources': source_links,
+                    'index': idx + 1
+                })
+
+            self.logger.info(f"Extracted {len(news_items)} news items from comments only")
+            return news_items
+
+        except Exception as e:
+            self.logger.error(f"Failed to extract news from comments only: {e}")
+            # 如果AI提取失败，返回空列表
+            return []

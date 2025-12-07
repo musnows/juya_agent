@@ -19,7 +19,7 @@ from typing import Dict, List, Optional
 
 from dotenv import load_dotenv
 
-from utils.modules.bilibili_api import BilibiliAPI, parse_cookie_string
+from utils.modules.bilibili_api import BilibiliAPI
 from utils.modules.subtitle_processor_ai import AISubtitleProcessor
 from utils.modules.email_sender import EmailSender
 from utils.video_fallback import VideoFallbackProcessor
@@ -57,9 +57,11 @@ class JuyaProcessor:
 
         # 初始化各个模块
         self.api = self._get_bili_api()
-        self.processor = AISubtitleProcessor()
         self.email_sender = EmailSender()
         self.fallback_processor = VideoFallbackProcessor(PROJECT_ROOT)
+
+        # 初始化处理器，传入视频数据目录
+        self.processor = AISubtitleProcessor(self.fallback_processor.video_dir)
     
     def _get_bili_api(self) -> BilibiliAPI:
         """获取B站API客户端"""

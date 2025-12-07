@@ -226,50 +226,172 @@ class BilibiliAPI:
             - ctime: 发布时间戳
             - formatted_time: 格式化时间字符串
             - is_owner: 是否为UP主
+            - source: 数据来源
         """
         try:
-            # 获取评论数据（使用合适的参数获取置顶评论）
-            comments_data = self.get_video_comments(bvid, page_num=1, page_size=50)
-            
-            if not comments_data:
-                return None
-            
-            # 获取置顶评论信息
-            upper = comments_data.get('upper')
-            if not upper or not upper.get('top'):
-                return None
-            
-            top_comment = upper['top']
-            member = top_comment.get('member', {})
-            
-            # 提取基本信息
-            result = {
-                'rpid': top_comment.get('rpid'),
-                'author': member.get('uname', '匿名用户'),
-                'content': top_comment.get('content', {}).get('message', ''),
-                'likes': top_comment.get('like', 0),
-                'ctime': top_comment.get('ctime', 0),
-                'is_owner': top_comment.get('attr', 0) == 2,  # attr=2 表示UP主置顶
-                'author_info': {
-                    'mid': member.get('mid'),
-                    'avatar': member.get('avatar'),
-                    'level': member.get('level_info', {}).get('current_level', 0),
-                    'vip_status': member.get('vip', {}).get('status', 0)
-                }
-            }
-            
-            # 格式化时间
-            if result['ctime']:
-                result['formatted_time'] = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(result['ctime']))
-            else:
-                result['formatted_time'] = ''
-            
-            return result
-            
+            # 尝试多种参数组合来获取置顶评论
+            param_combinations = [
+                {"sort": 1, "no_hot": False, "page_size": 30},
+                {"sort": 1, "no_hot": False, "page_size": 50},
+                {"sort": 0, "no_hot": False, "page_size": 30},
+            ]
+
+            for params in param_combinations:
+                try:
+                    comments_data = self.get_video_comments(bvid, page_num=1, **params)
+
+                    if not comments_data:
+                        continue
+
+                    # 检查 upper.top
+                    upper = comments_data.get('upper', {})
+                    if upper and upper.get('top'):
+                        return self._extract_comment_info(upper['top'], "upper.top")
+
+                    # 检查 top_replies
+                    top_replies = comments_data.get('top_replies', [])
+                    if top_replies:
+                        return self._extract_comment_info(top_replies[0], "top_replies")
+
+                except Exception:
+                    continue
+
+            return None
+
         except Exception as e:
             # 如果获取失败，记录错误但不抛出异常
             print(f"获取置顶评论失败: {e}")
             return None
+
+    def get_uploader_comments(self, bvid: str, max_pages: int = 5) -> List[Dict]:
+        """
+        获取UP主的所有评论
+
+        Args:
+            bvid: 视频的 BV 号
+            max_pages: 最大搜索页数，默认5页
+
+        Returns:
+            UP主评论列表，包含字段与 get_top_comment 相同，额外包含 type 字段
+        """
+        try:
+            # 获取视频信息得到UP主UID
+            video_info = self.get_video_info(bvid)
+            if not video_info:
+                return []
+
+            up_mid = video_info.get('owner', {}).get('mid')
+            if not up_mid:
+                return []
+
+            up_comments = []
+            seen_rpids = set()
+
+            # 按时间排序查找，逐页搜索
+            for page in range(1, max_pages + 1):
+                try:
+                    comments_data = self.get_video_comments(
+                        bvid=bvid,
+                        page_num=page,
+                        page_size=30,
+                        sort=0,
+                        no_hot=True
+                    )
+
+                    if not comments_data:
+                        break
+
+                    replies = comments_data.get('replies', [])
+                    if not replies:
+                        break
+
+                    for reply in replies:
+                        if not reply:
+                            continue
+
+                        rpid = reply.get('rpid')
+                        if rpid in seen_rpids:
+                            continue
+
+                        if str(reply.get('mid', '')) == str(up_mid):
+                            comment_info = self._extract_comment_info(reply, f"第{page}页")
+                            if comment_info:
+                                comment_info['type'] = 'uploader_comment'
+                                up_comments.append(comment_info)
+                                seen_rpids.add(rpid)
+
+                except Exception:
+                    continue
+
+            return up_comments
+
+        except Exception as e:
+            print(f"获取UP主评论失败: {e}")
+            return []
+
+    def get_all_uploader_related_comments(self, bvid: str) -> List[Dict]:
+        """
+        获取所有与UP主相关的评论（置顶评论 + UP主评论）
+
+        Args:
+            bvid: 视频的 BV 号
+
+        Returns:
+            所有UP主相关评论列表，按时间排序
+            每个评论包含 type 字段: 'pinned' 或 'uploader_comment'
+        """
+        try:
+            all_comments = []
+            seen_rpids = set()
+
+            # 获取置顶评论
+            pinned_comment = self.get_top_comment(bvid)
+            if pinned_comment:
+                pinned_comment['type'] = 'pinned'
+                all_comments.append(pinned_comment)
+                seen_rpids.add(pinned_comment['rpid'])
+
+            # 获取UP主评论
+            uploader_comments = self.get_uploader_comments(bvid)
+            for comment in uploader_comments:
+                if comment['rpid'] not in seen_rpids:
+                    all_comments.append(comment)
+                    seen_rpids.add(comment['rpid'])
+
+            # 按时间排序（最新的在前）
+            all_comments.sort(key=lambda x: x.get('ctime', 0), reverse=True)
+
+            return all_comments
+
+        except Exception as e:
+            print(f"获取UP主相关评论失败: {e}")
+            return []
+
+    def _extract_comment_info(self, comment_data: Dict, source: str) -> Optional[Dict]:
+        """提取评论信息的通用方法"""
+        if not comment_data:
+            return None
+
+        member = comment_data.get('member', {})
+        content = comment_data.get('content', {})
+
+        return {
+            'rpid': comment_data.get('rpid'),
+            'author': member.get('uname', '匿名用户'),
+            'author_mid': member.get('mid'),
+            'content': content.get('message', ''),
+            'likes': comment_data.get('like', 0),
+            'ctime': comment_data.get('ctime', 0),
+            'formatted_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(comment_data.get('ctime', 0))) if comment_data.get('ctime') else '',
+            'is_owner': comment_data.get('attr', 0) == 2,
+            'source': source,
+            'author_info': {
+                'mid': member.get('mid'),
+                'avatar': member.get('avatar'),
+                'level': member.get('level_info', {}).get('current_level', 0),
+                'vip_status': member.get('vip', {}).get('status', 0)
+            }
+        }
 
     @staticmethod
     def parse_cookie_string(cookie_str: str) -> Dict[str, str]:

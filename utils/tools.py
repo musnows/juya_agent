@@ -81,7 +81,9 @@ def _get_bili_api() -> BilibiliAPI:
 
 def _get_subtitle_processor() -> AISubtitleProcessor:
     """获取字幕处理器实例"""
-    return AISubtitleProcessor()
+    project_root = Path(__file__).resolve().parent.parent
+    video_dir = project_root / "data" / "video"
+    return AISubtitleProcessor(video_dir)
 
 
 def _get_email_sender() -> EmailSender:
