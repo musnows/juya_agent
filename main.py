@@ -87,17 +87,26 @@ class JuyaProcessor:
     
     def _is_ai_early_report(self, video_info: Dict, target_date: date = None) -> bool:
         """判断是否为AI早报视频"""
-        title = video_info.get('title', '').lower()
-        desc = video_info.get('desc', '').lower()
+        title = video_info.get('title', '')
+        desc = video_info.get('desc', '')
 
-        # 检查标题和描述中是否包含AI早报相关关键词
-        ai_keywords = ['ai', '人工智能', '早报', '资讯', '科技', '技术']
+        # 使用正则表达式检测"AI早报"，处理任意数量的空格和大小写
+        # ai\s*早报 匹配 "AI" + 任意数量空格 + "早报"
+        ai_early_report_pattern = re.compile(r'AI\s*早报', re.IGNORECASE)
 
-        # 标题检查
-        title_has_ai = any(keyword in title for keyword in ai_keywords)
+        # 检查标题中的AI早报关键词
+        title_has_ai_early_report = bool(ai_early_report_pattern.search(title))
 
-        # 描述检查
-        desc_has_ai = any(keyword in desc for keyword in ai_keywords)
+        # 如果标题中没有找到"AI早报"，则检查是否只有"早报"关键词（作为备选）
+        if not title_has_ai_early_report:
+            # 只匹配"早报"关键词
+            early_report_pattern = re.compile(r'早报')
+            title_has_early_report = bool(early_report_pattern.search(title))
+        else:
+            title_has_early_report = True  # 如果找到AI早报，则认为满足早报条件
+
+        # 检查描述中的关键词（作为辅助判断，主要用于没有明确标题的情况）
+        desc_has_ai_early_report = bool(ai_early_report_pattern.search(desc))
 
         # 检查视频日期
         timestamp = video_info.get('pubdate') or video_info.get('created') or 0
@@ -111,11 +120,17 @@ class JuyaProcessor:
             is_target_date = video_date.date() == date.today()
             date_str = "今日"
 
-        # 调试信息
-        if title_has_ai or desc_has_ai:
-            self.logger.info(f"Checking video: {title[:50]}..., AI keywords: {title_has_ai or desc_has_ai}, is {date_str}: {is_target_date}, video date: {video_date.date()}, target: {date.today() if not target_date else target_date}")
+        # 判断逻辑：必须满足日期条件，且满足以下任一条件：
+        # 1. 标题包含"AI早报"（优先级最高）
+        # 2. 标题包含"早报"（备选条件）
+        # 3. 描述包含"AI早报"（辅助条件）
+        is_ai_report = (title_has_ai_early_report or title_has_early_report or desc_has_ai_early_report)
 
-        return (title_has_ai or desc_has_ai) and is_target_date
+        # 调试信息
+        if is_ai_report:
+            self.logger.info(f"Checking video: {title[:50]}..., AI早报 keywords: title_ai_early={title_has_ai_early_report}, title_early={title_has_early_report}, desc_ai_early={desc_has_ai_early_report}, is {date_str}: {is_target_date}, video date: {video_date.date()}, target: {date.today() if not target_date else target_date}")
+
+        return is_ai_report and is_target_date
     
     def _check_today_report_exists(self) -> bool:
         """检查今日是否已存在AI早报文件"""
