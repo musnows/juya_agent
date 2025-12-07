@@ -6,6 +6,7 @@ AI驱动的字幕处理模块
 import os
 import re
 import json
+import time
 from datetime import datetime
 from typing import List, Dict, Optional
 from pathlib import Path
@@ -985,9 +986,59 @@ class AISubtitleProcessor:
             self.logger.error(f"Failed to save comments output: {e}")
             return False
 
+    def _get_uploader_comments_with_retry(self, video_info: Dict, date_dir: str = None, max_retries: int = 10, retry_interval: int = 120) -> List[Dict]:
+        """
+        获取UP主相关的评论，带重试机制，专门寻找包含时间戳格式的评论
+
+        Args:
+            video_info: 视频信息字典
+            date_dir: 日期目录名 (YYYYMMDD)，用于保存评论数据
+            max_retries: 最大重试次数，默认10次
+            retry_interval: 重试间隔（秒），默认120秒（2分钟）
+
+        Returns:
+            包含时间戳的评论内容列表
+        """
+        bvid = video_info.get('bvid', '')
+        if not bvid:
+            self.logger.warning("No BV ID found in video info, cannot fetch comments")
+            return []
+
+        # 首次尝试获取评论
+        self.logger.info(f"Starting to fetch uploader comments for video {bvid}")
+        comments = self._get_uploader_comments(video_info, date_dir)
+
+        if comments:
+            self.logger.info("Successfully fetched uploader comments on first attempt")
+            return comments
+
+        # 如果首次获取失败，开始重试
+        self.logger.info(f"No uploader comments found on first attempt, starting retry process (max {max_retries} retries)")
+
+        for retry_count in range(1, max_retries + 1):
+            self.logger.info(f"Retry attempt {retry_count}/{max_retries} for video {bvid}")
+
+            # 等待指定间隔
+            if retry_count > 1:
+                self.logger.info(f"Waiting {retry_interval} seconds before next retry...")
+                time.sleep(retry_interval)
+
+            # 尝试获取评论
+            comments = self._get_uploader_comments(video_info, date_dir)
+
+            if comments:
+                self.logger.info(f"Successfully fetched uploader comments after {retry_count} retries")
+                return comments
+
+            self.logger.warning(f"Retry attempt {retry_count} failed to fetch comments")
+
+        # 所有重试都失败了
+        self.logger.error(f"Failed to fetch uploader comments after {max_retries} retries (total time: {max_retries * retry_interval / 60:.1f} minutes)")
+        return []
+
     def _get_uploader_comments(self, video_info: Dict, date_dir: str = None) -> List[Dict]:
         """
-        获取UP主相关的评论，专门寻找包含时间戳格式的评论
+        获取UP主相关的评论，专门寻找包含时间戳格式的评论（单次尝试，不包含重试逻辑）
 
         Args:
             video_info: 视频信息字典
@@ -1087,8 +1138,8 @@ class AISubtitleProcessor:
             self.logger.warning("Speech recognition result is empty, cannot extract news")
             return []
 
-        # 获取UP主评论
-        comments = self._get_uploader_comments(video_info, date_dir) if video_info else []
+        # 获取UP主评论（带重试机制）
+        comments = self._get_uploader_comments_with_retry(video_info, date_dir) if video_info else []
 
         # 合并所有声道的文本
         full_speech_text = ' '.join(speech_texts)
@@ -1209,8 +1260,8 @@ UP主评论内容：
         Returns:
             新闻列表
         """
-        # 获取UP主评论
-        comments = self._get_uploader_comments(video_info, date_dir) if video_info else []
+        # 获取UP主评论（带重试机制）
+        comments = self._get_uploader_comments_with_retry(video_info, date_dir) if video_info else []
 
         if not comments:
             self.logger.warning("No uploader comments available, cannot extract news")
