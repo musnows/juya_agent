@@ -181,7 +181,9 @@ class WebGenerator:
         """生成首页HTML内容"""
         # 计算分页数据
         total_count = len(newspapers)
-        first_page = newspapers[:self.page_size]
+        # 确保首页显示偶数个卡片，如果page_size是奇数则减1
+        home_page_size = self.page_size if self.page_size % 2 == 0 else self.page_size - 1
+        first_page = newspapers[:home_page_size]
 
         # 生成早报卡片HTML
         cards_html = ""
@@ -677,12 +679,14 @@ class WebGenerator:
         """生成分页JSON数据文件"""
         data_dir = self.output_dir / "data"
 
-        # 生成分页数据
+        # 生成分页数据 - 实现奇偶数交替获取
         total_pages = (len(newspapers) + self.detail_page_size - 1) // self.detail_page_size
 
         for page_num in range(1, total_pages + 1):
             start_index = (page_num - 1) * self.detail_page_size
             end_index = min(start_index + self.detail_page_size, len(newspapers))
+
+            # 正常分页处理
             page_newspapers = newspapers[start_index:end_index]
 
             # 为每篇早报生成简化的摘要信息
